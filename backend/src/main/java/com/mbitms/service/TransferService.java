@@ -40,7 +40,6 @@ public class TransferService {
         StockLevel stock = stockLevelRepository
                 .findByItemIdAndBranchId(dto.getItemId(), dto.getFromBranchId())
                 .orElseThrow(() -> new RuntimeException("No stock found for this item at source branch"));
-
         if (stock.getQuantity() < dto.getQuantity()) {
             throw new RuntimeException("Insufficient stock. Available: " + stock.getQuantity());
         }
@@ -82,7 +81,6 @@ public class TransferService {
         TransferRequest transfer = getTransferById(transferId);
         User approver = userRepository.findByEmail(approverEmail)
                 .orElseThrow(() -> new RuntimeException("Approver not found"));
-
         Approval approval = new Approval();
         approval.setTransfer(transfer);
         approval.setApprover(approver);

@@ -1,11 +1,13 @@
 package com.mbitms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
+import jakarta.persistence.FetchType;
 
 @Entity
 @Table(name = "purchase_orders")
@@ -36,6 +38,7 @@ public class PurchaseOrder {
     private Double totalValue;
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL)
-    private List<PurchaseOrderItem> items;
+   @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+   @JsonIgnoreProperties("purchaseOrder")
+   private List<PurchaseOrderItem> items;
 }

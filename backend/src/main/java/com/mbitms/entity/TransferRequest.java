@@ -1,4 +1,3 @@
-
 package com.mbitms.entity;
 
 import jakarta.persistence.*;
