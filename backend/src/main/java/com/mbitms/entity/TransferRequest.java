@@ -1,16 +1,10 @@
 package com.mbitms.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "transfer_requests")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class TransferRequest {
 
     @Id
@@ -44,4 +38,27 @@ public class TransferRequest {
 
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public InventoryItem getItem() { return item; }
+    public void setItem(InventoryItem item) { this.item = item; }
+    public Branch getFromBranch() { return fromBranch; }
+    public void setFromBranch(Branch fromBranch) { this.fromBranch = fromBranch; }
+    public Branch getToBranch() { return toBranch; }
+    public void setToBranch(Branch toBranch) { this.toBranch = toBranch; }
+    public User getRequestedBy() { return requestedBy; }
+    public void setRequestedBy(User requestedBy) { this.requestedBy = requestedBy; }
+    public Double getQuantity() { return quantity; }
+    public void setQuantity(Double quantity) { this.quantity = quantity; }
+    public Double getTotalValue() { return totalValue; }
+    public void setTotalValue(Double totalValue) { this.totalValue = totalValue; }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

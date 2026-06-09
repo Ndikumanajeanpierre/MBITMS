@@ -86,7 +86,6 @@ public class PurchaseOrderService {
             PurchaseOrderItem poItem = poItemRepository.findById(receiveItem.getPoItemId())
                     .orElseThrow(() -> new RuntimeException("PO Item not found"));
 
-            // Update stock level
             StockLevel stock = stockLevelRepository
                     .findByItemIdAndBranchId(poItem.getItem().getId(), po.getBranch().getId())
                     .orElseGet(() -> {
@@ -101,7 +100,6 @@ public class PurchaseOrderService {
             stock.setQuantity(stock.getQuantity() + receiveItem.getReceivedQuantity());
             stockLevelRepository.save(stock);
 
-            // Create stock batch
             StockBatch batch = new StockBatch();
             batch.setItem(poItem.getItem());
             batch.setBranch(po.getBranch());

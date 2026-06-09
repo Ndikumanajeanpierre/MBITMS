@@ -4,6 +4,7 @@ import com.mbitms.entity.Supplier;
 import com.mbitms.service.SupplierService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,19 +27,22 @@ public class SupplierController {
     }
 
     @PostMapping
-    public ResponseEntity<Supplier> createSupplier(@RequestBody Supplier supplier) {
-        return ResponseEntity.ok(supplierService.createSupplier(supplier));
+    public ResponseEntity<Supplier> createSupplier(@RequestBody Supplier supplier,
+                                                    Authentication auth) {
+        return ResponseEntity.ok(supplierService.createSupplier(supplier, auth.getName()));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Supplier> updateSupplier(@PathVariable Long id,
-                                                    @RequestBody Supplier supplier) {
-        return ResponseEntity.ok(supplierService.updateSupplier(id, supplier));
+                                                    @RequestBody Supplier supplier,
+                                                    Authentication auth) {
+        return ResponseEntity.ok(supplierService.updateSupplier(id, supplier, auth.getName()));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivateSupplier(@PathVariable Long id) {
-        supplierService.deactivateSupplier(id);
+    public ResponseEntity<Void> deactivateSupplier(@PathVariable Long id,
+                                                    Authentication auth) {
+        supplierService.deactivateSupplier(id, auth.getName());
         return ResponseEntity.ok().build();
     }
 }

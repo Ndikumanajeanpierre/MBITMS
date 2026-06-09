@@ -2,18 +2,11 @@ package com.mbitms.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.List;
-import jakarta.persistence.FetchType;
 
 @Entity
 @Table(name = "purchase_orders")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class PurchaseOrder {
 
     @Id
@@ -38,7 +31,24 @@ public class PurchaseOrder {
     private Double totalValue;
     private LocalDateTime createdAt = LocalDateTime.now();
 
-   @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-   @JsonIgnoreProperties("purchaseOrder")
-   private List<PurchaseOrderItem> items;
+    @OneToMany(mappedBy = "purchaseOrder", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonIgnoreProperties("purchaseOrder")
+    private List<PurchaseOrderItem> items;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Supplier getSupplier() { return supplier; }
+    public void setSupplier(Supplier supplier) { this.supplier = supplier; }
+    public Branch getBranch() { return branch; }
+    public void setBranch(Branch branch) { this.branch = branch; }
+    public User getCreatedBy() { return createdBy; }
+    public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public Double getTotalValue() { return totalValue; }
+    public void setTotalValue(Double totalValue) { this.totalValue = totalValue; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    public List<PurchaseOrderItem> getItems() { return items; }
+    public void setItems(List<PurchaseOrderItem> items) { this.items = items; }
 }

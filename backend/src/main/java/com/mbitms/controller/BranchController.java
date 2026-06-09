@@ -4,6 +4,7 @@ import com.mbitms.entity.Branch;
 import com.mbitms.service.BranchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,19 +27,22 @@ public class BranchController {
     }
 
     @PostMapping
-    public ResponseEntity<Branch> createBranch(@RequestBody Branch branch) {
-        return ResponseEntity.ok(branchService.createBranch(branch));
+    public ResponseEntity<Branch> createBranch(@RequestBody Branch branch,
+                                                Authentication auth) {
+        return ResponseEntity.ok(branchService.createBranch(branch, auth.getName()));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Branch> updateBranch(@PathVariable Long id,
-                                                @RequestBody Branch branch) {
-        return ResponseEntity.ok(branchService.updateBranch(id, branch));
+                                                @RequestBody Branch branch,
+                                                Authentication auth) {
+        return ResponseEntity.ok(branchService.updateBranch(id, branch, auth.getName()));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivateBranch(@PathVariable Long id) {
-        branchService.deactivateBranch(id);
+    public ResponseEntity<Void> deactivateBranch(@PathVariable Long id,
+                                                  Authentication auth) {
+        branchService.deactivateBranch(id, auth.getName());
         return ResponseEntity.ok().build();
     }
 }

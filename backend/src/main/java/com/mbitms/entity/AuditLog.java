@@ -1,16 +1,10 @@
 package com.mbitms.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "audit_logs")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class AuditLog {
 
     @Id
@@ -29,4 +23,19 @@ public class AuditLog {
     private String details;
 
     private LocalDateTime timestamp = LocalDateTime.now();
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+    public String getAction() { return action; }
+    public void setAction(String action) { this.action = action; }
+    public String getEntity() { return entity; }
+    public void setEntity(String entity) { this.entity = entity; }
+    public String getEntityId() { return entityId; }
+    public void setEntityId(String entityId) { this.entityId = entityId; }
+    public String getDetails() { return details; }
+    public void setDetails(String details) { this.details = details; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
 }

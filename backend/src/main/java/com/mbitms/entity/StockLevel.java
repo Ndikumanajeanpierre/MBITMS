@@ -1,15 +1,9 @@
 package com.mbitms.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 
 @Entity
 @Table(name = "stock_levels")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class StockLevel {
 
     @Id
@@ -28,4 +22,15 @@ public class StockLevel {
     private Double quantity = 0.0;
 
     private Double reorderLevel = 0.0;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public InventoryItem getItem() { return item; }
+    public void setItem(InventoryItem item) { this.item = item; }
+    public Branch getBranch() { return branch; }
+    public void setBranch(Branch branch) { this.branch = branch; }
+    public Double getQuantity() { return quantity; }
+    public void setQuantity(Double quantity) { this.quantity = quantity; }
+    public Double getReorderLevel() { return reorderLevel; }
+    public void setReorderLevel(Double reorderLevel) { this.reorderLevel = reorderLevel; }
 }

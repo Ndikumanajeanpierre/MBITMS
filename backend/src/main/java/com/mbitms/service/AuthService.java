@@ -8,18 +8,30 @@ import com.mbitms.entity.User;
 import com.mbitms.repository.BranchRepository;
 import com.mbitms.repository.UserRepository;
 import com.mbitms.security.JwtUtil;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
     private final BranchRepository branchRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final AuditLogService auditLogService;
+
+    public AuthService(UserRepository userRepository,
+                       BranchRepository branchRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil,
+                       @Lazy AuditLogService auditLogService) {
+        this.userRepository = userRepository;
+        this.branchRepository = branchRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.auditLogService = auditLogService;
+    }
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -40,11 +52,19 @@ public class AuthService {
         user.setBranch(branch);
         user.setActive(true);
 
-        userRepository.save(user);
+        User saved = userRepository.save(user);
 
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return new AuthResponse(token, user.getName(), user.getEmail(),
-                user.getRole().name(),
+        auditLogService.log(
+            saved.getEmail(),
+            "CREATE",
+            "User",
+            saved.getId().toString(),
+            "Created user: " + saved.getName() + " with role " + saved.getRole()
+        );
+
+        String token = jwtUtil.generateToken(saved.getEmail(), saved.getRole().name());
+        return new AuthResponse(token, saved.getName(), saved.getEmail(),
+                saved.getRole().name(),
                 branch != null ? branch.getId() : null);
     }
 
@@ -59,6 +79,14 @@ public class AuthService {
         if (!user.isActive()) {
             throw new RuntimeException("Account is deactivated");
         }
+
+        auditLogService.log(
+            user.getEmail(),
+            "LOGIN",
+            "User",
+            user.getId().toString(),
+            "User logged in"
+        );
 
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
         return new AuthResponse(token, user.getName(), user.getEmail(),

@@ -12,6 +12,7 @@ import java.util.List;
 public class BranchService {
 
     private final BranchRepository branchRepository;
+    private final AuditLogService auditLogService;
 
     public List<Branch> getAllBranches() {
         return branchRepository.findAll();
@@ -26,22 +27,50 @@ public class BranchService {
                 .orElseThrow(() -> new RuntimeException("Branch not found"));
     }
 
-    public Branch createBranch(Branch branch) {
+    public Branch createBranch(Branch branch, String userEmail) {
         branch.setActive(true);
-        return branchRepository.save(branch);
+        Branch saved = branchRepository.save(branch);
+
+        auditLogService.log(
+            userEmail,
+            "CREATE",
+            "Branch",
+            saved.getId().toString(),
+            "Branch created: " + saved.getName() + " — " + saved.getLocation()
+        );
+
+        return saved;
     }
 
-    public Branch updateBranch(Long id, Branch updated) {
+    public Branch updateBranch(Long id, Branch updated, String userEmail) {
         Branch branch = getBranchById(id);
         branch.setName(updated.getName());
         branch.setLocation(updated.getLocation());
         branch.setContact(updated.getContact());
-        return branchRepository.save(branch);
+        Branch saved = branchRepository.save(branch);
+
+        auditLogService.log(
+            userEmail,
+            "UPDATE",
+            "Branch",
+            saved.getId().toString(),
+            "Branch updated: " + saved.getName() + " — " + saved.getLocation()
+        );
+
+        return saved;
     }
 
-    public void deactivateBranch(Long id) {
+    public void deactivateBranch(Long id, String userEmail) {
         Branch branch = getBranchById(id);
         branch.setActive(false);
         branchRepository.save(branch);
+
+        auditLogService.log(
+            userEmail,
+            "DELETE",
+            "Branch",
+            branch.getId().toString(),
+            "Branch deactivated: " + branch.getName()
+        );
     }
 }

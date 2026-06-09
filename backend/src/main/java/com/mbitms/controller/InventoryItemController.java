@@ -5,6 +5,7 @@ import com.mbitms.entity.StockLevel;
 import com.mbitms.service.InventoryItemService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -33,27 +34,30 @@ public class InventoryItemController {
     }
 
     @PostMapping
-    public ResponseEntity<InventoryItem> createItem(@RequestBody InventoryItem item) {
-        return ResponseEntity.ok(itemService.createItem(item));
+    public ResponseEntity<InventoryItem> createItem(@RequestBody InventoryItem item,
+                                                     Authentication auth) {
+        return ResponseEntity.ok(itemService.createItem(item, auth.getName()));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<InventoryItem> updateItem(@PathVariable Long id,
-                                                     @RequestBody InventoryItem item) {
-        return ResponseEntity.ok(itemService.updateItem(id, item));
+                                                     @RequestBody InventoryItem item,
+                                                     Authentication auth) {
+        return ResponseEntity.ok(itemService.updateItem(id, item, auth.getName()));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivateItem(@PathVariable Long id) {
-        itemService.deactivateItem(id);
+    public ResponseEntity<Void> deactivateItem(@PathVariable Long id,
+                                                Authentication auth) {
+        itemService.deactivateItem(id, auth.getName());
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/image")
     public ResponseEntity<String> uploadImage(@PathVariable Long id,
-                                               @RequestParam("file") MultipartFile file)
-            throws IOException {
-        return ResponseEntity.ok(itemService.uploadImage(id, file));
+                                               @RequestParam("file") MultipartFile file,
+                                               Authentication auth) throws IOException {
+        return ResponseEntity.ok(itemService.uploadImage(id, file, auth.getName()));
     }
 
     @GetMapping("/stock/branch/{branchId}")

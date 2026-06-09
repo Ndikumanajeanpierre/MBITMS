@@ -65,12 +65,16 @@ public class TransferController {
     }
 
     @PostMapping("/{id}/transit")
-    public ResponseEntity<TransferRequest> markInTransit(@PathVariable Long id) {
-        return ResponseEntity.ok(transferService.markInTransit(id));
+    public ResponseEntity<TransferRequest> markInTransit(
+            @PathVariable Long id,
+            Authentication auth) {
+        return ResponseEntity.ok(transferService.markInTransit(id, auth.getName()));
     }
 
     @PostMapping("/{id}/receive")
-    public ResponseEntity<TransferRequest> markReceived(@PathVariable Long id) {
-        return ResponseEntity.ok(transferService.markReceived(id));
+    public ResponseEntity<TransferRequest> markReceived(
+            @PathVariable Long id,
+            Authentication auth) {
+        return ResponseEntity.ok(transferService.markReceived(id, auth.getName()));
     }
 }

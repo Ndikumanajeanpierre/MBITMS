@@ -22,6 +22,7 @@ public class InventoryItemService {
     private final InventoryItemRepository itemRepository;
     private final StockLevelRepository stockLevelRepository;
     private final BranchRepository branchRepository;
+    private final AuditLogService auditLogService;
 
     public List<InventoryItem> getAllItems() {
         return itemRepository.findByActiveTrue();
@@ -36,29 +37,57 @@ public class InventoryItemService {
                 .orElseThrow(() -> new RuntimeException("Item not found"));
     }
 
-    public InventoryItem createItem(InventoryItem item) {
+    public InventoryItem createItem(InventoryItem item, String userEmail) {
         if (itemRepository.existsByCode(item.getCode())) {
             throw new RuntimeException("Item code already exists");
         }
         item.setActive(true);
-        return itemRepository.save(item);
+        InventoryItem saved = itemRepository.save(item);
+
+        auditLogService.log(
+            userEmail,
+            "CREATE",
+            "InventoryItem",
+            saved.getId().toString(),
+            "Item created: " + saved.getName() + " [" + saved.getCode() + "]"
+        );
+
+        return saved;
     }
 
-    public InventoryItem updateItem(Long id, InventoryItem updated) {
+    public InventoryItem updateItem(Long id, InventoryItem updated, String userEmail) {
         InventoryItem item = getItemById(id);
         item.setName(updated.getName());
         item.setCategory(updated.getCategory());
         item.setUnit(updated.getUnit());
-        return itemRepository.save(item);
+        InventoryItem saved = itemRepository.save(item);
+
+        auditLogService.log(
+            userEmail,
+            "UPDATE",
+            "InventoryItem",
+            saved.getId().toString(),
+            "Item updated: " + saved.getName() + " [" + saved.getCode() + "]"
+        );
+
+        return saved;
     }
 
-    public void deactivateItem(Long id) {
+    public void deactivateItem(Long id, String userEmail) {
         InventoryItem item = getItemById(id);
         item.setActive(false);
         itemRepository.save(item);
+
+        auditLogService.log(
+            userEmail,
+            "DELETE",
+            "InventoryItem",
+            item.getId().toString(),
+            "Item deactivated: " + item.getName() + " [" + item.getCode() + "]"
+        );
     }
 
-    public String uploadImage(Long itemId, MultipartFile file) throws IOException {
+    public String uploadImage(Long itemId, MultipartFile file, String userEmail) throws IOException {
         InventoryItem item = getItemById(itemId);
         String uploadDir = "uploads/items/";
         Files.createDirectories(Paths.get(uploadDir));
@@ -68,6 +97,15 @@ public class InventoryItemService {
         String imageUrl = "/uploads/items/" + filename;
         item.setImageUrl(imageUrl);
         itemRepository.save(item);
+
+        auditLogService.log(
+            userEmail,
+            "UPDATE",
+            "InventoryItem",
+            item.getId().toString(),
+            "Image uploaded for item: " + item.getName()
+        );
+
         return imageUrl;
     }
 

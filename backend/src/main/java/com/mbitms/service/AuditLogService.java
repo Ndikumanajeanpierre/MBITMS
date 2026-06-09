@@ -1,21 +1,25 @@
 package com.mbitms.service;
 
 import com.mbitms.entity.AuditLog;
-import com.mbitms.entity.User;
 import com.mbitms.repository.AuditLogRepository;
 import com.mbitms.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+
+    public AuditLogService(AuditLogRepository auditLogRepository,
+                           @Lazy UserRepository userRepository) {
+        this.auditLogRepository = auditLogRepository;
+        this.userRepository = userRepository;
+    }
 
     public void log(String email, String action, String entity,
                     String entityId, String details) {
