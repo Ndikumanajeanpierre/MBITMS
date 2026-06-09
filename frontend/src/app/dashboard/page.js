@@ -96,6 +96,8 @@ export default function DashboardPage() {
             onClick={() => router.push('/purchase-orders')} />
           <QuickAction label="Audit Logs" icon="📋"
             onClick={() => router.push('/audit-logs')} />
+            <QuickAction label="Analytics" icon="📊"
+  onClick={() => router.push('/analytics')} />
         </div>
       </div>
     </div>
