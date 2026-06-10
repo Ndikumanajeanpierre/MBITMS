@@ -13,6 +13,8 @@ export default function DashboardPage() {
     transfers: 0,
     suppliers: 0,
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!user) {
@@ -24,27 +26,36 @@ export default function DashboardPage() {
 
   const fetchStats = async () => {
     try {
-      const [branches, items, transfers, suppliers] = await Promise.all([
+      const [branches, items, transfers] = await Promise.all([
         api.get('/branches'),
         api.get('/items'),
         api.get('/transfers'),
-        api.get('/suppliers'),
       ]);
+
+      let suppliersCount = 0;
+      if (['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role)) {
+        const suppliers = await api.get('/suppliers');
+        suppliersCount = suppliers.data.length;
+      }
+
       setStats({
         branches: branches.data.length,
         items: items.data.length,
         transfers: transfers.data.length,
-        suppliers: suppliers.data.length,
+        suppliers: suppliersCount,
       });
     } catch (err) {
       console.error(err);
+      setError('Failed to load some dashboard stats.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="bg-white shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="bg-blue-600 text-white rounded-lg p-2">
@@ -73,61 +84,74 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1>
         <p className="text-gray-500 mb-8">Welcome back, {user?.name}!</p>
 
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm flex justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError('')} className="font-bold ml-4">×</button>
+          </div>
+        )}
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard title="Branches" value={stats.branches} color="blue"
-            icon="🏢" onClick={() => router.push('/branches')} />
-          <StatCard title="Inventory Items" value={stats.items} color="green"
-            icon="📦" onClick={() => router.push('/inventory')} />
-          <StatCard title="Transfers" value={stats.transfers} color="orange"
-            icon="🔄" onClick={() => router.push('/transfers')} />
-          <StatCard title="Suppliers" value={stats.suppliers} color="purple"
-            icon="🏭" onClick={() => router.push('/suppliers')} />
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white border rounded-xl p-6 animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatCard title="Branches" value={stats.branches} color="blue"
+              icon="🏢" onClick={() => router.push('/branches')} />
+            <StatCard title="Inventory Items" value={stats.items} color="green"
+              icon="📦" onClick={() => router.push('/inventory')} />
+            <StatCard title="Transfers" value={stats.transfers} color="orange"
+              icon="🔄" onClick={() => router.push('/transfers')} />
+            {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
+              <StatCard title="Suppliers" value={stats.suppliers} color="purple"
+                icon="🏭" onClick={() => router.push('/suppliers')} />
+            )}
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <h2 className="text-lg font-semibold text-gray-700 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+          <QuickAction label="New Transfer" icon="🔄"
+            onClick={() => router.push('/transfers')} />
+
+          {['ADMIN', 'HEAD_OFFICE_ADMIN', 'BRANCH_MANAGER'].includes(user?.role) && (
+            <QuickAction label="Add Item" icon="➕"
+              onClick={() => router.push('/inventory')} />
+          )}
+
+          {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
+            <QuickAction label="Purchase Order" icon="🛒"
+              onClick={() => router.push('/purchase-orders')} />
+          )}
+
+          {['ADMIN', 'HEAD_OFFICE_ADMIN'].includes(user?.role) && (
+            <QuickAction label="Audit Logs" icon="📋"
+              onClick={() => router.push('/audit-logs')} />
+          )}
+
+          {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
+            <QuickAction label="Analytics" icon="📊"
+              onClick={() => router.push('/analytics')} />
+          )}
+
+          {user?.role === 'ADMIN' && (
+            <QuickAction label="Manage Users" icon="👥"
+              onClick={() => router.push('/users')} />
+          )}
+
+          <QuickAction label="Stock" icon="📦"
+            onClick={() => router.push('/stock')} />
+
         </div>
-
-       {/* Quick Actions */}
-<h2 className="text-lg font-semibold text-gray-700 mb-4">Quick Actions</h2>
-<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-  {/* All roles */}
-  <QuickAction label="New Transfer" icon="🔄"
-    onClick={() => router.push('/transfers')} />
-
-  {/* Admin, Head Office, Branch Manager only */}
-  {['ADMIN', 'HEAD_OFFICE_ADMIN', 'BRANCH_MANAGER'].includes(user?.role) && (
-    <QuickAction label="Add Item" icon="➕"
-      onClick={() => router.push('/inventory')} />
-  )}
-
-  {/* Admin, Head Office, Accountant only */}
-  {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
-    <QuickAction label="Purchase Order" icon="🛒"
-      onClick={() => router.push('/purchase-orders')} />
-  )}
-
-  {/* Admin, Head Office only */}
-  {['ADMIN', 'HEAD_OFFICE_ADMIN'].includes(user?.role) && (
-    <QuickAction label="Audit Logs" icon="📋"
-      onClick={() => router.push('/audit-logs')} />
-  )}
-
-  {/* Admin, Head Office, Accountant only */}
-  {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
-    <QuickAction label="Analytics" icon="📊"
-      onClick={() => router.push('/analytics')} />
-  )}
-
-  {/* Admin only */}
-  {user?.role === 'ADMIN' && (
-    <QuickAction label="Manage Users" icon="👥"
-      onClick={() => router.push('/users')} />
-  )}
-
-  {/* All roles */}
-  <QuickAction label="Stock" icon="📦"
-    onClick={() => router.push('/stock')} />
-
-</div>
       </div>
     </div>
   );
