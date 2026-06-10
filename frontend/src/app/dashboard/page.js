@@ -85,24 +85,49 @@ export default function DashboardPage() {
             icon="🏭" onClick={() => router.push('/suppliers')} />
         </div>
 
-        {/* Quick Actions */}
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <QuickAction label="New Transfer" icon="🔄"
-            onClick={() => router.push('/transfers')} />
-          <QuickAction label="Add Item" icon="➕"
-            onClick={() => router.push('/inventory')} />
-          <QuickAction label="Purchase Order" icon="🛒"
-            onClick={() => router.push('/purchase-orders')} />
-          <QuickAction label="Audit Logs" icon="📋"
-            onClick={() => router.push('/audit-logs')} />
-            <QuickAction label="Analytics" icon="📊"
-  onClick={() => router.push('/analytics')} />
-  <QuickAction label="Manage Users" icon="👥"
+       {/* Quick Actions */}
+<h2 className="text-lg font-semibold text-gray-700 mb-4">Quick Actions</h2>
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+  {/* All roles */}
+  <QuickAction label="New Transfer" icon="🔄"
+    onClick={() => router.push('/transfers')} />
+
+  {/* Admin, Head Office, Branch Manager only */}
+  {['ADMIN', 'HEAD_OFFICE_ADMIN', 'BRANCH_MANAGER'].includes(user?.role) && (
+    <QuickAction label="Add Item" icon="➕"
+      onClick={() => router.push('/inventory')} />
+  )}
+
+  {/* Admin, Head Office, Accountant only */}
+  {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
+    <QuickAction label="Purchase Order" icon="🛒"
+      onClick={() => router.push('/purchase-orders')} />
+  )}
+
+  {/* Admin, Head Office only */}
+  {['ADMIN', 'HEAD_OFFICE_ADMIN'].includes(user?.role) && (
+    <QuickAction label="Audit Logs" icon="📋"
+      onClick={() => router.push('/audit-logs')} />
+  )}
+
+  {/* Admin, Head Office, Accountant only */}
+  {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
+    <QuickAction label="Analytics" icon="📊"
+      onClick={() => router.push('/analytics')} />
+  )}
+
+  {/* Admin only */}
+  {user?.role === 'ADMIN' && (
+    <QuickAction label="Manage Users" icon="👥"
       onClick={() => router.push('/users')} />
-      <QuickAction label="Stock" icon="📦"
+  )}
+
+  {/* All roles */}
+  <QuickAction label="Stock" icon="📦"
     onClick={() => router.push('/stock')} />
-        </div>
+
+</div>
       </div>
     </div>
   );
