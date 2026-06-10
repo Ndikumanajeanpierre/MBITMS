@@ -13,6 +13,7 @@ export default function InventoryPage() {
   const [editItem, setEditItem] = useState(null);
   const [formData, setFormData] = useState({ name: '', code: '', category: '', unit: '' });
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -64,6 +65,38 @@ export default function InventoryPage() {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const res = await api.get('/csv/export/items', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'items.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setSuccess('Items exported successfully!');
+    } catch (err) {
+      setError('Export failed');
+    }
+  };
+
+  const handleImportCSV = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const data = new FormData();
+    data.append('file', file);
+    try {
+      const res = await api.post('/csv/import/items', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setSuccess(res.data);
+      fetchItems();
+    } catch (err) {
+      setError('Import failed');
+    }
+  };
+
   const filtered = items.filter(i =>
     i.name.toLowerCase().includes(search.toLowerCase()) ||
     i.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -96,16 +129,25 @@ export default function InventoryPage() {
             <h1 className="text-2xl font-bold text-gray-800">Inventory Management</h1>
             <p className="text-gray-500 text-sm mt-1">Manage all inventory items</p>
           </div>
-          <button
-            onClick={() => { setShowForm(true); setEditItem(null); setFormData({ name: '', code: '', category: '', unit: '' }); }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
-          >
-            + Add Item
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handleExportCSV}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium">
+              ↓ Export CSV
+            </button>
+            <label className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm font-medium cursor-pointer">
+              ↑ Import CSV
+              <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+            </label>
+            <button
+              onClick={() => { setShowForm(true); setEditItem(null); setFormData({ name: '', code: '', category: '', unit: '' }); }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
+              + Add Item
+            </button>
+          </div>
         </div>
 
-        {/* Search */}
-        <div className="mb-4">
+        {/* Search + Template */}
+        <div className="mb-4 flex items-center gap-4">
           <input
             type="text"
             placeholder="Search by name, code or category..."
@@ -113,11 +155,25 @@ export default function InventoryPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
           />
+          
+            href="data:text/csv;charset=utf-8,code,name,category,unit%0AMED-001,Paracetamol 500mg,Medicine,Box%0AMED-002,Surgical Gloves,Medical Supplies,Pack"
+            download="items_template.csv"
+            className="text-xs text-blue-600 hover:underline whitespace-nowrap"
+            📥 Download CSV Template
+          
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm flex justify-between">
             {error}
+            <button onClick={() => setError('')} className="font-bold">×</button>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm flex justify-between">
+            {success}
+            <button onClick={() => setSuccess('')} className="font-bold">×</button>
           </div>
         )}
 
