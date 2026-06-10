@@ -4,6 +4,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 
+const BACKEND_URL = 'http://localhost:8080';
+const CAN_MANAGE = ['ADMIN', 'HEAD_OFFICE_ADMIN', 'BRANCH_MANAGER'];
+const CAN_DELETE  = ['ADMIN', 'HEAD_OFFICE_ADMIN'];
+
 export default function InventoryPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
@@ -15,6 +19,9 @@ export default function InventoryPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [search, setSearch] = useState('');
+
+  const canManage = user?.role && CAN_MANAGE.includes(user.role);
+  const canDelete  = user?.role && CAN_DELETE.includes(user.role);
 
   useEffect(() => {
     if (!user) { router.push('/login'); return; }
@@ -97,6 +104,33 @@ export default function InventoryPage() {
     }
   };
 
+  const handleImageUpload = async (itemId, file) => {
+    if (!file) return;
+    const data = new FormData();
+    data.append('file', file);
+    try {
+      await api.post(`/items/${itemId}/image`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setSuccess('Image uploaded successfully!');
+      fetchItems();
+    } catch (err) {
+      setError('Image upload failed');
+    }
+  };
+
+  const downloadTemplate = () => {
+    const csv = 'code,name,category,unit\nMED-001,Paracetamol 500mg,Medicine,Box\nMED-002,Surgical Gloves,Medical Supplies,Pack';
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'items_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   const filtered = items.filter(i =>
     i.name.toLowerCase().includes(search.toLowerCase()) ||
     i.code.toLowerCase().includes(search.toLowerCase()) ||
@@ -117,8 +151,13 @@ export default function InventoryPage() {
             <span className="font-bold text-gray-800">Inventory</span>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span></span>
-            <button onClick={logout} className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">Logout</button>
+            <span className="text-sm text-gray-600">
+              {user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span>
+            </span>
+            <button onClick={logout}
+              className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+              Logout
+            </button>
           </div>
         </div>
       </nav>
@@ -129,25 +168,36 @@ export default function InventoryPage() {
             <h1 className="text-2xl font-bold text-gray-800">Inventory Management</h1>
             <p className="text-gray-500 text-sm mt-1">Manage all inventory items</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap justify-end">
+            {/* Export/Import visible to all */}
             <button onClick={handleExportCSV}
               className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium">
-              ↓ Export CSV
+              Export CSV
             </button>
-            <label className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm font-medium cursor-pointer">
-              ↑ Import CSV
-              <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
-            </label>
-            <button
-              onClick={() => { setShowForm(true); setEditItem(null); setFormData({ name: '', code: '', category: '', unit: '' }); }}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-              + Add Item
-            </button>
+
+            {/* Import and template only for managers+ */}
+            {canManage && (
+              <>
+                <label className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm font-medium cursor-pointer">
+                  Import CSV
+                  <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
+                </label>
+                <button onClick={downloadTemplate}
+                  className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition text-sm font-medium">
+                  CSV Template
+                </button>
+                <button
+                  onClick={() => { setShowForm(true); setEditItem(null); setFormData({ name: '', code: '', category: '', unit: '' }); }}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
+                  + Add Item
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Search + Template */}
-        <div className="mb-4 flex items-center gap-4">
+        {/* Search */}
+        <div className="mb-4">
           <input
             type="text"
             placeholder="Search by name, code or category..."
@@ -155,30 +205,24 @@ export default function InventoryPage() {
             onChange={(e) => setSearch(e.target.value)}
             className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
           />
-          
-            href="data:text/csv;charset=utf-8,code,name,category,unit%0AMED-001,Paracetamol 500mg,Medicine,Box%0AMED-002,Surgical Gloves,Medical Supplies,Pack"
-            download="items_template.csv"
-            className="text-xs text-blue-600 hover:underline whitespace-nowrap"
-            📥 Download CSV Template
-          
         </div>
 
+        {/* Alerts */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm flex justify-between">
             {error}
-            <button onClick={() => setError('')} className="font-bold">×</button>
+            <button onClick={() => setError('')} className="font-bold">x</button>
           </div>
         )}
-
         {success && (
           <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm flex justify-between">
             {success}
-            <button onClick={() => setSuccess('')} className="font-bold">×</button>
+            <button onClick={() => setSuccess('')} className="font-bold">x</button>
           </div>
         )}
 
         {/* Form Modal */}
-        {showForm && (
+        {showForm && canManage && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 w-full max-w-md">
               <h2 className="text-lg font-bold text-gray-800 mb-4">
@@ -230,7 +274,7 @@ export default function InventoryPage() {
           </div>
         )}
 
-        {/* Items Table */}
+        {/* Table */}
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
@@ -240,47 +284,91 @@ export default function InventoryPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">#</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Code</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Unit</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">#</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Image</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Code</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Unit</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                  {canManage && (
+                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  )}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-400">No items found</td>
+                    <td colSpan={canManage ? 8 : 7} className="text-center py-8 text-gray-400">
+                      No items found
+                    </td>
                   </tr>
                 ) : (
                   filtered.map((item, index) => (
                     <tr key={item.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm text-gray-500">{index + 1}</td>
-                      <td className="px-6 py-4 font-medium text-gray-800">{item.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
+                      <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+
+                      {/* ✅ Fixed image cell — larger, proper fit, full URL */}
+                      <td className="px-4 py-3">
+                        <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
+                          {item.imageUrl ? (
+                            <img
+                              src={BACKEND_URL + item.imageUrl}
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => { e.target.style.display = 'none'; }}
+                            />
+                          ) : canManage ? (
+                            <label className="cursor-pointer w-full h-full flex items-center justify-center">
+                              <div className="flex flex-col items-center text-gray-400 hover:text-blue-500 transition">
+                                <span className="text-xl">+</span>
+                                <span className="text-xs">Photo</span>
+                              </div>
+                              <input type="file" accept="image/*" className="hidden"
+                                onChange={(e) => handleImageUpload(item.id, e.target.files[0])} />
+                            </label>
+                          ) : (
+                            <span className="text-gray-300 text-2xl">📦</span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3 font-medium text-gray-800">{item.name}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
                         <span className="bg-gray-100 px-2 py-1 rounded font-mono text-xs">{item.code}</span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{item.category}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{item.unit}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">{item.unit}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          item.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
                           {item.active ? 'Active' : 'Inactive'}
                         </span>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <button onClick={() => handleEdit(item)}
-                            className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100 transition">
-                            Edit
-                          </button>
-                          <button onClick={() => handleDelete(item.id)}
-                            className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-lg hover:bg-red-100 transition">
-                            Deactivate
-                          </button>
-                        </div>
-                      </td>
+
+                      {/* Actions — only for managers+ */}
+                      {canManage && (
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <button onClick={() => handleEdit(item)}
+                              className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100 transition">
+                              Edit
+                            </button>
+                            <label className="text-xs bg-purple-50 text-purple-600 px-3 py-1 rounded-lg hover:bg-purple-100 transition cursor-pointer">
+                              Photo
+                              <input type="file" accept="image/*" className="hidden"
+                                onChange={(e) => handleImageUpload(item.id, e.target.files[0])} />
+                            </label>
+                            {canDelete && (
+                              <button onClick={() => handleDelete(item.id)}
+                                className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-lg hover:bg-red-100 transition">
+                                Deactivate
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))
                 )}
