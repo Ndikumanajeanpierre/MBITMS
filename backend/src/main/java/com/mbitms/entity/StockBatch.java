@@ -1,5 +1,6 @@
 package com.mbitms.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
@@ -21,6 +22,7 @@ public class StockBatch {
 
     @ManyToOne
     @JoinColumn(name = "po_id")
+    @JsonIgnoreProperties({"items", "createdBy"})
     private PurchaseOrder purchaseOrder;
 
     private String batchNumber;

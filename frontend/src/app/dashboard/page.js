@@ -150,6 +150,8 @@ export default function DashboardPage() {
 
           <QuickAction label="Stock" icon="📦"
             onClick={() => router.push('/stock')} />
+            <QuickAction label="Batch Tracking" icon="⏰"
+  onClick={() => router.push('/batches')} />
 
         </div>
       </div>
