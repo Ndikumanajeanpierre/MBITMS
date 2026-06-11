@@ -22,11 +22,11 @@ public class TransferService {
     private final UserRepository userRepository;
     private final StockLevelRepository stockLevelRepository;
     private final AuditLogService auditLogService;
+    private final EmailService emailService;
 
     private static final Double QTY_THRESHOLD = 50.0;
     private static final Double VALUE_THRESHOLD = 500000.0;
 
-    // Safe helper — never throws NonUniqueResultException
     private StockLevel getStockLevel(Long itemId, Long branchId) {
         List<StockLevel> levels = stockLevelRepository.findAllByItemIdAndBranchId(itemId, branchId);
         if (levels.isEmpty()) {
@@ -71,6 +71,24 @@ public class TransferService {
             "Transfer requested: " + saved.getQuantity() + "x " + item.getName() +
             " from " + fromBranch.getName() + " to " + toBranch.getName()
         );
+
+        // Send email to all managers and admins
+        try {
+            userRepository.findAll().stream()
+                .filter(u -> u.getRole().name().equals("BRANCH_MANAGER") ||
+                             u.getRole().name().equals("ADMIN") ||
+                             u.getRole().name().equals("HEAD_OFFICE_ADMIN"))
+                .forEach(manager -> emailService.sendTransferCreated(
+                    manager.getEmail(),
+                    item.getName(),
+                    dto.getQuantity(),
+                    fromBranch.getName(),
+                    toBranch.getName(),
+                    requester.getName()
+                ));
+        } catch (Exception e) {
+            System.out.println("Email notification failed: " + e.getMessage());
+        }
 
         return saved;
     }
@@ -120,6 +138,18 @@ public class TransferService {
                 (dto.getComment() != null ? ": " + dto.getComment() : "")
             );
 
+            // Notify requester of rejection
+            try {
+                emailService.sendTransferApproved(
+                    transfer.getRequestedBy().getEmail(),
+                    transfer.getItem().getName(),
+                    transfer.getQuantity(),
+                    "REJECTED"
+                );
+            } catch (Exception e) {
+                System.out.println("Email notification failed: " + e.getMessage());
+            }
+
         } else if ("APPROVED".equals(dto.getDecision())) {
             boolean needsL2 = transfer.getQuantity() >= QTY_THRESHOLD ||
                     (transfer.getTotalValue() != null &&
@@ -136,6 +166,23 @@ public class TransferService {
                     "Transfer L1 approved by " + approver.getName() + " — escalated to Head Office"
                 );
 
+                // Notify head office admins
+                try {
+                    userRepository.findAll().stream()
+                        .filter(u -> u.getRole().name().equals("HEAD_OFFICE_ADMIN") ||
+                                     u.getRole().name().equals("ADMIN"))
+                        .forEach(admin -> emailService.sendTransferCreated(
+                            admin.getEmail(),
+                            transfer.getItem().getName(),
+                            transfer.getQuantity(),
+                            transfer.getFromBranch().getName(),
+                            transfer.getToBranch().getName(),
+                            "Branch Manager (L1 Approved - needs L2)"
+                        ));
+                } catch (Exception e) {
+                    System.out.println("Email notification failed: " + e.getMessage());
+                }
+
             } else {
                 transfer.setStatus("APPROVED");
 
@@ -146,6 +193,18 @@ public class TransferService {
                     transfer.getId().toString(),
                     "Transfer fully approved by " + approver.getName()
                 );
+
+                // Notify requester of approval
+                try {
+                    emailService.sendTransferApproved(
+                        transfer.getRequestedBy().getEmail(),
+                        transfer.getItem().getName(),
+                        transfer.getQuantity(),
+                        "APPROVED"
+                    );
+                } catch (Exception e) {
+                    System.out.println("Email notification failed: " + e.getMessage());
+                }
             }
         }
 
