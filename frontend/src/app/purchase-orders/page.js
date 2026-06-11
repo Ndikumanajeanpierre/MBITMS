@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import PageLayout from '@/components/layout/PageLayout';
 
 export default function PurchaseOrdersPage() {
   const { user, logout } = useAuth();
@@ -47,17 +48,11 @@ export default function PurchaseOrdersPage() {
   };
 
   const addItemRow = () => {
-    setFormData({
-      ...formData,
-      items: [...formData.items, { itemId: '', quantity: '', unitCost: '' }]
-    });
+    setFormData({ ...formData, items: [...formData.items, { itemId: '', quantity: '', unitCost: '' }] });
   };
 
   const removeItemRow = (index) => {
-    setFormData({
-      ...formData,
-      items: formData.items.filter((_, i) => i !== index)
-    });
+    setFormData({ ...formData, items: formData.items.filter((_, i) => i !== index) });
   };
 
   const updateItemRow = (index, field, value) => {
@@ -119,250 +114,241 @@ export default function PurchaseOrdersPage() {
     }
   };
 
-  const getStatusColor = (status) => {
-    const colors = {
-      DRAFT: 'bg-gray-100 text-gray-700',
-      ORDERED: 'bg-blue-100 text-blue-700',
-      PARTIALLY_RECEIVED: 'bg-yellow-100 text-yellow-700',
-      RECEIVED: 'bg-green-100 text-green-700',
+  const statusStyle = (status) => {
+    const map = {
+      DRAFT:              { background: '#f1f5f9', color: '#475569' },
+      ORDERED:            { background: '#dbeafe', color: '#1d4ed8' },
+      PARTIALLY_RECEIVED: { background: '#fef9c3', color: '#a16207' },
+      RECEIVED:           { background: '#dcfce7', color: '#15803d' },
     };
-    return colors[status] || 'bg-gray-100 text-gray-700';
+    return map[status] || { background: '#f1f5f9', color: '#475569' };
   };
 
+  const inputStyle = {
+    width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
+    borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box',
+    background: '#fff', color: '#0f172a',
+  };
+  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 500, color: '#64748b', marginBottom: 4 };
+
+  const actions = (
+    <button
+      onClick={() => setShowForm(true)}
+      style={{
+        background: '#378ADD', color: '#fff', border: 'none', borderRadius: 8,
+        padding: '8px 16px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+        display: 'flex', alignItems: 'center', gap: 6,
+      }}
+    >
+      + New Purchase Order
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/dashboard')}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-              ← Dashboard
-            </button>
-            <span className="text-gray-300">|</span>
-            <span className="font-bold text-gray-800">Purchase Orders</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span></span>
-            <button onClick={logout} className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">Logout</button>
-          </div>
+    <PageLayout title="Purchase Orders" subtitle="Manage procurement and stock receiving" actions={actions}>
+
+      {error && (
+        <div style={{
+          background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+          padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          {error}
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontWeight: 700, fontSize: 16 }}>×</button>
         </div>
-      </nav>
+      )}
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Purchase Orders</h1>
-            <p className="text-gray-500 text-sm mt-1">Manage procurement and stock receiving</p>
-          </div>
-          <button onClick={() => setShowForm(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-            + New Purchase Order
-          </button>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-            <button onClick={() => setError('')} className="ml-2 font-bold">×</button>
-          </div>
-        )}
-
-        {/* Create PO Modal */}
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-screen overflow-y-auto">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">New Purchase Order</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Supplier</label>
-                    <select required value={formData.supplierId}
-                      onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                      <option value="">Select supplier...</option>
-                      {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Receiving Branch</label>
-                    <select required value={formData.branchId}
-                      onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
-                      <option value="">Select branch...</option>
-                      {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
+      {showForm && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 580, maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#0f172a', marginBottom: 16 }}>New Purchase Order</h2>
+            <form onSubmit={handleSubmit}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
                 <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="text-sm font-medium text-gray-700">Items</label>
-                    <button type="button" onClick={addItemRow}
-                      className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded-lg hover:bg-blue-100">
-                      + Add Item
-                    </button>
-                  </div>
-                  {formData.items.map((item, index) => (
-                    <div key={index} className="grid grid-cols-3 gap-2 mb-2">
-                      <select required value={item.itemId}
-                        onChange={(e) => updateItemRow(index, 'itemId', e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
-                        <option value="">Select item...</option>
-                        {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-                      </select>
-                      <input required type="number" min="1" placeholder="Quantity"
-                        value={item.quantity}
-                        onChange={(e) => updateItemRow(index, 'quantity', e.target.value)}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                      <div className="flex gap-1">
-                        <input required type="number" min="0" placeholder="Unit Cost"
-                          value={item.unitCost}
-                          onChange={(e) => updateItemRow(index, 'unitCost', e.target.value)}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm" />
-                        {index > 0 && (
-                          <button type="button" onClick={() => removeItemRow(index)}
-                            className="text-red-500 hover:text-red-700 px-2">×</button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                  <label style={labelStyle}>Supplier</label>
+                  <select required value={formData.supplierId}
+                    onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                    style={inputStyle}>
+                    <option value="">Select supplier…</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
                 </div>
-
-                <div className="flex gap-3 pt-2">
-                  <button type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">
-                    Create PO
-                  </button>
-                  <button type="button" onClick={() => setShowForm(false)}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition font-medium">
-                    Cancel
-                  </button>
+                <div>
+                  <label style={labelStyle}>Receiving Branch</label>
+                  <select required value={formData.branchId}
+                    onChange={(e) => setFormData({ ...formData, branchId: e.target.value })}
+                    style={inputStyle}>
+                    <option value="">Select branch…</option>
+                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
                 </div>
-              </form>
-            </div>
-          </div>
-        )}
+              </div>
 
-        {/* Receive PO Modal */}
-        {showReceiveForm && selectedPO && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-screen overflow-y-auto">
-              <h2 className="text-lg font-bold text-gray-800 mb-1">Receive Purchase Order</h2>
-              <p className="text-sm text-gray-500 mb-4">PO #{selectedPO.id} — {selectedPO.supplier?.name}</p>
-              <form onSubmit={handleReceive} className="space-y-4">
-                {receiveData.items.map((item, index) => (
-                  <div key={index} className="border rounded-lg p-3">
-                    <p className="font-medium text-sm text-gray-800 mb-2">{item.itemName}</p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="text-xs text-gray-500">Received Qty</label>
-                        <input type="number" value={item.receivedQuantity}
-                          onChange={(e) => {
-                            const updated = [...receiveData.items];
-                            updated[index].receivedQuantity = e.target.value;
-                            setReceiveData({ items: updated });
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none text-sm mt-1" />
-                      </div>
-                      <div>
-                        <label className="text-xs text-gray-500">Batch Number</label>
-                        <input type="text" value={item.batchNumber}
-                          onChange={(e) => {
-                            const updated = [...receiveData.items];
-                            updated[index].batchNumber = e.target.value;
-                            setReceiveData({ items: updated });
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none text-sm mt-1"
-                          placeholder="e.g. BATCH-001" />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-xs text-gray-500">Expiry Date</label>
-                        <input type="date" value={item.expiryDate}
-                          onChange={(e) => {
-                            const updated = [...receiveData.items];
-                            updated[index].expiryDate = e.target.value;
-                            setReceiveData({ items: updated });
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg outline-none text-sm mt-1" />
-                      </div>
-                    </div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Items</label>
+                  <button type="button" onClick={addItemRow} style={{
+                    background: '#eff6ff', color: '#378ADD', border: 'none', borderRadius: 6,
+                    padding: '4px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 500,
+                  }}>+ Add Item</button>
+                </div>
+                {formData.items.map((item, index) => (
+                  <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 32px', gap: 8, marginBottom: 8 }}>
+                    <select required value={item.itemId}
+                      onChange={(e) => updateItemRow(index, 'itemId', e.target.value)}
+                      style={inputStyle}>
+                      <option value="">Select item…</option>
+                      {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                    </select>
+                    <input required type="number" min="1" placeholder="Qty"
+                      value={item.quantity}
+                      onChange={(e) => updateItemRow(index, 'quantity', e.target.value)}
+                      style={inputStyle} />
+                    <input required type="number" min="0" placeholder="Unit Cost"
+                      value={item.unitCost}
+                      onChange={(e) => updateItemRow(index, 'unitCost', e.target.value)}
+                      style={inputStyle} />
+                    {index > 0 ? (
+                      <button type="button" onClick={() => removeItemRow(index)} style={{
+                        background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 18, padding: 0,
+                      }}>×</button>
+                    ) : <div />}
                   </div>
                 ))}
-                <div className="flex gap-3 pt-2">
-                  <button type="submit"
-                    className="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition font-medium">
-                    Confirm Receipt
-                  </button>
-                  <button type="button" onClick={() => { setShowReceiveForm(false); setSelectedPO(null); }}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition font-medium">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+              </div>
 
-        {/* PO Table */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button type="submit" style={{
+                  flex: 1, background: '#378ADD', color: '#fff', border: 'none',
+                  borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                }}>Create PO</button>
+                <button type="button" onClick={() => setShowForm(false)} style={{
+                  flex: 1, background: '#f1f5f9', color: '#475569', border: 'none',
+                  borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                }}>Cancel</button>
+              </div>
+            </form>
           </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+        </div>
+      )}
+
+      {showReceiveForm && selectedPO && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 480, maxHeight: '90vh', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#0f172a', marginBottom: 2 }}>Receive Purchase Order</h2>
+            <p style={{ fontSize: 12, color: '#64748b', marginBottom: 16 }}>PO #{selectedPO.id} — {selectedPO.supplier?.name}</p>
+            <form onSubmit={handleReceive}>
+              {receiveData.items.map((item, index) => (
+                <div key={index} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 10 }}>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: '#0f172a', marginBottom: 8 }}>{item.itemName}</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div>
+                      <label style={labelStyle}>Received Qty</label>
+                      <input type="number" value={item.receivedQuantity}
+                        onChange={(e) => { const u = [...receiveData.items]; u[index].receivedQuantity = e.target.value; setReceiveData({ items: u }); }}
+                        style={inputStyle} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Batch Number</label>
+                      <input type="text" value={item.batchNumber} placeholder="e.g. BATCH-001"
+                        onChange={(e) => { const u = [...receiveData.items]; u[index].batchNumber = e.target.value; setReceiveData({ items: u }); }}
+                        style={inputStyle} />
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>Expiry Date</label>
+                      <input type="date" value={item.expiryDate}
+                        onChange={(e) => { const u = [...receiveData.items]; u[index].expiryDate = e.target.value; setReceiveData({ items: u }); }}
+                        style={inputStyle} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                <button type="submit" style={{
+                  flex: 1, background: '#16a34a', color: '#fff', border: 'none',
+                  borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                }}>Confirm Receipt</button>
+                <button type="button" onClick={() => { setShowReceiveForm(false); setSelectedPO(null); }} style={{
+                  flex: 1, background: '#f1f5f9', color: '#475569', border: 'none',
+                  borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                }}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+          <div style={{
+            width: 36, height: 36, border: '3px solid #e2e8f0',
+            borderTopColor: '#378ADD', borderRadius: '50%',
+            animation: 'spin 0.7s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                {['#', 'Supplier', 'Branch', 'Total Value', 'Status', 'Date', 'Actions'].map(h => (
+                  <th key={h} style={{
+                    textAlign: 'left', padding: '10px 20px',
+                    fontSize: 11, fontWeight: 600, color: '#94a3b8',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {orders.length === 0 ? (
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">#</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Supplier</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Branch</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Total Value</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Date</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8', fontSize: 13 }}>
+                    No purchase orders found
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {orders.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-400">
-                      No purchase orders found
+              ) : (
+                orders.map((order, index) => (
+                  <tr key={order.id} style={{ borderBottom: '1px solid #f1f5f9' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#94a3b8' }}>{index + 1}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>{order.supplier?.name}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{order.branch?.name}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{order.totalValue?.toLocaleString()} RWF</td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <span style={{
+                        ...statusStyle(order.status),
+                        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                      }}>{order.status}</span>
+                    </td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      {order.status !== 'RECEIVED' && (
+                        <button onClick={() => openReceiveForm(order)} style={{
+                          background: '#f0fdf4', color: '#16a34a', border: 'none',
+                          borderRadius: 6, padding: '4px 12px', fontSize: 12,
+                          fontWeight: 500, cursor: 'pointer',
+                        }}>Receive</button>
+                      )}
                     </td>
                   </tr>
-                ) : (
-                  orders.map((order, index) => (
-                    <tr key={order.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm text-gray-500">{index + 1}</td>
-                      <td className="px-6 py-4 font-medium text-gray-800">{order.supplier?.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{order.branch?.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {order.totalValue?.toLocaleString()} RWF
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {order.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4">
-                        {order.status !== 'RECEIVED' && (
-                          <button onClick={() => openReceiveForm(order)}
-                            className="text-xs bg-green-50 text-green-600 px-3 py-1 rounded-lg hover:bg-green-100 transition">
-                            Receive
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </PageLayout>
   );
 }

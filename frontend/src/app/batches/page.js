@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import PageLayout from '@/components/layout/PageLayout';
 
 export default function BatchesPage() {
   const { user, logout } = useAuth();
@@ -46,161 +47,132 @@ export default function BatchesPage() {
     if (!expiryDate) return null;
     const today = new Date();
     const expiry = new Date(expiryDate);
-    const diff = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
-    return diff;
+    return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
   };
 
-  const getExpiryColor = (days) => {
-    if (days === null) return 'text-gray-500';
-    if (days < 0) return 'text-red-600 font-bold';
-    if (days <= 7) return 'text-red-500 font-bold';
-    if (days <= 30) return 'text-yellow-600 font-semibold';
-    return 'text-green-600';
+  const getExpiryStyle = (days) => {
+    if (days === null) return { color: '#94a3b8' };
+    if (days < 0)  return { color: '#dc2626', fontWeight: 700 };
+    if (days <= 7) return { color: '#ef4444', fontWeight: 700 };
+    if (days <= 30) return { color: '#ca8a04', fontWeight: 600 };
+    return { color: '#16a34a' };
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/dashboard')}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-              ← Dashboard
-            </button>
-            <span className="text-gray-300">|</span>
-            <span className="font-bold text-gray-800">Batch Tracking</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span></span>
-            <button onClick={logout} className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">Logout</button>
-          </div>
-        </div>
-      </nav>
+    <PageLayout title="Batch & Expiry Tracking" subtitle="Monitor stock batches and expiry dates">
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Batch & Expiry Tracking</h1>
-          <p className="text-gray-500 text-sm mt-1">Monitor stock batches and expiry dates</p>
-        </div>
-
-        {/* Alert Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-500">Expired Batches</p>
-                <p className="text-2xl font-bold text-red-600">{expired.length}</p>
-              </div>
-              <span className="text-3xl">🚫</span>
+      {/* Alert Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { label: 'Expired Batches', count: expired.length, icon: '🚫', bg: '#fef2f2', border: '#fecaca', color: '#dc2626' },
+          { label: 'Expiring Soon (30 days)', count: expiring.length, icon: '⚠️', bg: '#fefce8', border: '#fde68a', color: '#ca8a04' },
+          { label: 'Total Batches', count: batches.length, icon: '📦', bg: '#f0fdf4', border: '#bbf7d0', color: '#16a34a' },
+        ].map(card => (
+          <div key={card.label} style={{
+            background: card.bg, border: `1px solid ${card.border}`,
+            borderRadius: 12, padding: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <div>
+              <p style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>{card.label}</p>
+              <p style={{ fontSize: 24, fontWeight: 700, color: card.color }}>{card.count}</p>
             </div>
+            <span style={{ fontSize: 28 }}>{card.icon}</span>
           </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-500">Expiring Soon (30 days)</p>
-                <p className="text-2xl font-bold text-yellow-600">{expiring.length}</p>
-              </div>
-              <span className="text-3xl">⚠️</span>
-            </div>
-          </div>
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-gray-500">Total Batches</p>
-                <p className="text-2xl font-bold text-green-600">{batches.length}</p>
-              </div>
-              <span className="text-3xl">📦</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-4">
-          {[
-            { key: 'all', label: 'All Batches', count: batches.length },
-            { key: 'expiring', label: 'Expiring Soon', count: expiring.length },
-            { key: 'expired', label: 'Expired', count: expired.length },
-          ].map(tab => (
-            <button key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                activeTab === tab.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border text-gray-600 hover:bg-gray-50'
-              }`}>
-              {tab.label} ({tab.count})
-            </button>
-          ))}
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">#</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Item</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Branch</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Batch No.</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Expiry Date</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Days Left</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {getDisplayData().length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-8 text-gray-400">
-                      No batches found
-                    </td>
-                  </tr>
-                ) : (
-                  getDisplayData().map((batch, index) => {
-                    const days = getDaysUntilExpiry(batch.expiryDate);
-                    return (
-                      <tr key={batch.id} className="hover:bg-gray-50 transition">
-                        <td className="px-6 py-4 text-sm text-gray-500">{index + 1}</td>
-                        <td className="px-6 py-4 font-medium text-gray-800">{batch.item?.name}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">{batch.branch?.name}</td>
-                        <td className="px-6 py-4 text-sm">
-                          <span className="bg-gray-100 px-2 py-1 rounded font-mono text-xs">
-                            {batch.batchNumber || 'N/A'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm font-medium text-gray-800">{batch.quantity}</td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {batch.expiryDate || 'No expiry'}
-                        </td>
-                        <td className="px-6 py-4">
-                          {days !== null ? (
-                            <span className={`text-sm ${getExpiryColor(days)}`}>
-                              {days < 0 ? `Expired ${Math.abs(days)} days ago` :
-                               days === 0 ? 'Expires today!' :
-                               `${days} days`}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-sm">No expiry</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+        ))}
       </div>
-    </div>
+
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        {[
+          { key: 'all',      label: 'All Batches',   count: batches.length },
+          { key: 'expiring', label: 'Expiring Soon', count: expiring.length },
+          { key: 'expired',  label: 'Expired',       count: expired.length },
+        ].map(tab => (
+          <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+            padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: 'none',
+            background: activeTab === tab.key ? '#378ADD' : '#fff',
+            color: activeTab === tab.key ? '#fff' : '#475569',
+            boxShadow: activeTab === tab.key ? 'none' : 'inset 0 0 0 1px #e2e8f0',
+          }}>
+            {tab.label} ({tab.count})
+          </button>
+        ))}
+      </div>
+
+      {error && (
+        <div style={{
+          background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+          padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13,
+        }}>{error}</div>
+      )}
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+          <div style={{
+            width: 36, height: 36, border: '3px solid #e2e8f0',
+            borderTopColor: '#378ADD', borderRadius: '50%',
+            animation: 'spin 0.7s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                {['#', 'Item', 'Branch', 'Batch No.', 'Quantity', 'Expiry Date', 'Days Left'].map(h => (
+                  <th key={h} style={{
+                    textAlign: 'left', padding: '10px 20px',
+                    fontSize: 11, fontWeight: 600, color: '#94a3b8',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {getDisplayData().length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8', fontSize: 13 }}>
+                    No batches found
+                  </td>
+                </tr>
+              ) : (
+                getDisplayData().map((batch, index) => {
+                  const days = getDaysUntilExpiry(batch.expiryDate);
+                  return (
+                    <tr key={batch.id} style={{ borderBottom: '1px solid #f1f5f9' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: '#94a3b8' }}>{index + 1}</td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>{batch.item?.name}</td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{batch.branch?.name}</td>
+                      <td style={{ padding: '14px 20px' }}>
+                        <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontFamily: 'monospace', color: '#475569' }}>
+                          {batch.batchNumber || 'N/A'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>{batch.quantity}</td>
+                      <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{batch.expiryDate || 'No expiry'}</td>
+                      <td style={{ padding: '14px 20px' }}>
+                        {days !== null ? (
+                          <span style={{ fontSize: 13, ...getExpiryStyle(days) }}>
+                            {days < 0 ? `Expired ${Math.abs(days)} days ago` :
+                             days === 0 ? 'Expires today!' :
+                             `${days} days`}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 13, color: '#94a3b8' }}>No expiry</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </PageLayout>
   );
 }

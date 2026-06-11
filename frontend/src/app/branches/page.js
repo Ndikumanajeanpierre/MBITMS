@@ -3,9 +3,10 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import PageLayout from '@/components/layout/PageLayout';
 
 export default function BranchesPage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,154 +64,115 @@ export default function BranchesPage() {
     }
   };
 
+  const canManage = ['ADMIN', 'HEAD_OFFICE_ADMIN'].includes(user?.role);
+
+  const actions = canManage ? (
+    <button onClick={() => { setShowForm(true); setEditBranch(null); setFormData({ name: '', location: '', contact: '' }); }}
+      style={{ background: '#185FA5', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <i className="ti ti-plus" style={{ fontSize: 14 }} /> Add Branch
+    </button>
+  ) : null;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/dashboard')}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-              ← Dashboard
-            </button>
-            <span className="text-gray-300">|</span>
-            <span className="font-bold text-gray-800">Branches</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span></span>
-            <button onClick={logout} className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">Logout</button>
+    <PageLayout title="Branch Management" subtitle="Manage all company branches" actions={actions}>
+
+      {error && (
+        <div style={{ background: '#FCEBEB', border: '0.5px solid #F7C1C1', color: '#A32D2D', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+          <span>{error}</span>
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, color: '#A32D2D' }}>×</button>
+        </div>
+      )}
+
+      {/* Modal */}
+      {showForm && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 440 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 500, color: '#0f172a', marginBottom: 20 }}>
+              {editBranch ? 'Edit Branch' : 'Add New Branch'}
+            </h2>
+            <form onSubmit={handleSubmit}>
+              {[
+                { label: 'Branch Name', key: 'name', placeholder: 'e.g. Kigali North Branch' },
+                { label: 'Location',    key: 'location', placeholder: 'e.g. Kigali, Rwanda' },
+                { label: 'Contact',     key: 'contact', placeholder: 'e.g. 0788000000' },
+              ].map(f => (
+                <div key={f.key} style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#334155', marginBottom: 6 }}>{f.label}</label>
+                  <input
+                    required={f.key !== 'contact'}
+                    value={formData[f.key]}
+                    onChange={e => setFormData({ ...formData, [f.key]: e.target.value })}
+                    placeholder={f.placeholder}
+                    style={{ width: '100%', padding: '8px 12px', border: '0.5px solid #cbd5e1', borderRadius: 8, fontSize: 13, color: '#0f172a', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                <button type="submit" style={{ flex: 1, background: '#185FA5', color: '#fff', border: 'none', padding: '9px 0', borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+                  {editBranch ? 'Update' : 'Create'}
+                </button>
+                <button type="button" onClick={() => { setShowForm(false); setEditBranch(null); }}
+                  style={{ flex: 1, background: '#f1f5f9', color: '#334155', border: '0.5px solid #e2e8f0', padding: '9px 0', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      </nav>
+      )}
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Branch Management</h1>
-            <p className="text-gray-500 text-sm mt-1">Manage all company branches</p>
-          </div>
-          <button
-            onClick={() => { setShowForm(true); setEditBranch(null); setFormData({ name: '', location: '', contact: '' }); }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
-          >
-            + Add Branch
-          </button>
+      {/* Table */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '48px 0' }}>
+          <div style={{ width: 36, height: 36, border: '3px solid #e2e8f0', borderTopColor: '#185FA5', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto' }} />
         </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        {/* Form Modal */}
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">
-                {editBranch ? 'Edit Branch' : 'Add New Branch'}
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Branch Name</label>
-                  <input
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. Kigali North Branch"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                  <input
-                    required
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. Kigali, Rwanda"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact</label>
-                  <input
-                    value={formData.contact}
-                    onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. 0788000000"
-                  />
-                </div>
-                <div className="flex gap-3 pt-2">
-                  <button type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">
-                    {editBranch ? 'Update' : 'Create'}
-                  </button>
-                  <button type="button"
-                    onClick={() => { setShowForm(false); setEditBranch(null); }}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition font-medium">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Branches Table */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">#</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Location</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Contact</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+      ) : (
+        <div style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '0.5px solid #e2e8f0' }}>
+                {['#', 'Name', 'Location', 'Contact', 'Status', ...(canManage ? ['Actions'] : [])].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '10px 16px', fontSize: 11, fontWeight: 500, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {branches.length === 0 ? (
+                <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: '#94a3b8', fontSize: 13 }}>No branches found</td></tr>
+              ) : branches.map((branch, i) => (
+                <tr key={branch.id} style={{ borderBottom: '0.5px solid #f1f5f9' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#94a3b8' }}>{i + 1}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>{branch.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#475569' }}>{branch.location}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#475569' }}>{branch.contact}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <span style={{ background: branch.active ? '#EAF3DE' : '#FCEBEB', color: branch.active ? '#3B6D11' : '#A32D2D', fontSize: 11, padding: '3px 10px', borderRadius: 99, fontWeight: 500 }}>
+                      {branch.active ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  {canManage && (
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button onClick={() => handleEdit(branch)}
+                          style={{ background: '#E6F1FB', color: '#185FA5', border: 'none', padding: '4px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
+                          Edit
+                        </button>
+                        <button onClick={() => handleDelete(branch.id)}
+                          style={{ background: '#FCEBEB', color: '#A32D2D', border: 'none', padding: '4px 12px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>
+                          Deactivate
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {branches.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-400">No branches found</td>
-                  </tr>
-                ) : (
-                  branches.map((branch, index) => (
-                    <tr key={branch.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm text-gray-500">{index + 1}</td>
-                      <td className="px-6 py-4 font-medium text-gray-800">{branch.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{branch.location}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{branch.contact}</td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${branch.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                          {branch.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex gap-2">
-                          <button onClick={() => handleEdit(branch)}
-                            className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100 transition">
-                            Edit
-                          </button>
-                          <button onClick={() => handleDelete(branch.id)}
-                            className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-lg hover:bg-red-100 transition">
-                            Deactivate
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </PageLayout>
   );
 }

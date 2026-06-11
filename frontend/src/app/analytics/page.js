@@ -3,10 +3,11 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import PageLayout from '@/components/layout/PageLayout';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie,
-  Cell, LineChart, Line, Legend
+  Cell,
 } from 'recharts';
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
@@ -15,13 +16,7 @@ export default function AnalyticsPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    branches: [],
-    items: [],
-    transfers: [],
-    suppliers: [],
-    stockLevels: [],
-  });
+  const [stats, setStats] = useState({ branches: [], items: [], transfers: [], suppliers: [] });
 
   useEffect(() => {
     if (!user) { router.push('/login'); return; }
@@ -36,12 +31,7 @@ export default function AnalyticsPage() {
         api.get('/transfers'),
         api.get('/suppliers'),
       ]);
-      setStats({
-        branches: branches.data,
-        items: items.data,
-        transfers: transfers.data,
-        suppliers: suppliers.data,
-      });
+      setStats({ branches: branches.data, items: items.data, transfers: transfers.data, suppliers: suppliers.data });
     } catch (err) {
       console.error(err);
     } finally {
@@ -49,232 +39,189 @@ export default function AnalyticsPage() {
     }
   };
 
-  // Transfer status distribution
   const transferStatusData = () => {
     const statusCount = {};
-    stats.transfers.forEach(t => {
-      statusCount[t.status] = (statusCount[t.status] || 0) + 1;
-    });
+    stats.transfers.forEach(t => { statusCount[t.status] = (statusCount[t.status] || 0) + 1; });
     return Object.entries(statusCount).map(([name, value]) => ({ name, value }));
   };
 
-  // Items by category
   const itemsByCategoryData = () => {
     const catCount = {};
-    stats.items.forEach(i => {
-      const cat = i.category || 'Uncategorized';
-      catCount[cat] = (catCount[cat] || 0) + 1;
-    });
+    stats.items.forEach(i => { const cat = i.category || 'Uncategorized'; catCount[cat] = (catCount[cat] || 0) + 1; });
     return Object.entries(catCount).map(([name, value]) => ({ name, value }));
   };
 
-  // Transfers by branch
   const transfersByBranchData = () => {
     const branchCount = {};
-    stats.transfers.forEach(t => {
-      const branch = t.fromBranch?.name || 'Unknown';
-      branchCount[branch] = (branchCount[branch] || 0) + 1;
-    });
+    stats.transfers.forEach(t => { const branch = t.fromBranch?.name || 'Unknown'; branchCount[branch] = (branchCount[branch] || 0) + 1; });
     return Object.entries(branchCount).map(([name, transfers]) => ({ name, transfers }));
   };
 
+  const cardStyle = (bg, border) => ({
+    background: bg, border: `1px solid ${border}`, borderRadius: 12, padding: 16,
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  });
+
+  const chartBoxStyle = {
+    background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 24,
+  };
+
+  const chartTitleStyle = {
+    fontSize: 15, fontWeight: 600, color: '#0f172a', marginBottom: 16,
+  };
+
+  if (loading) return (
+    <PageLayout title="Analytics Dashboard" subtitle="System overview and insights">
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+        <div style={{ width: 36, height: 36, border: '3px solid #e2e8f0', borderTopColor: '#378ADD', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    </PageLayout>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/dashboard')}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-              ← Dashboard
-            </button>
-            <span className="text-gray-300">|</span>
-            <span className="font-bold text-gray-800">Analytics</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span></span>
-            <button onClick={logout} className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">Logout</button>
-          </div>
-        </div>
-      </nav>
+    <PageLayout title="Analytics Dashboard" subtitle="System overview and insights">
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Analytics Dashboard</h1>
-          <p className="text-gray-500 text-sm mt-1">System overview and insights</p>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-        ) : (
-          <>
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <SummaryCard title="Total Branches" value={stats.branches.length} icon="🏢" color="blue" />
-              <SummaryCard title="Inventory Items" value={stats.items.length} icon="📦" color="green" />
-              <SummaryCard title="Total Transfers" value={stats.transfers.length} icon="🔄" color="orange" />
-              <SummaryCard title="Suppliers" value={stats.suppliers.length} icon="🏭" color="purple" />
+      {/* Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+        {[
+          { title: 'Total Branches',   value: stats.branches.length,  icon: '🏢', bg: '#eff6ff', border: '#bfdbfe' },
+          { title: 'Inventory Items',  value: stats.items.length,     icon: '📦', bg: '#f0fdf4', border: '#bbf7d0' },
+          { title: 'Total Transfers',  value: stats.transfers.length, icon: '🔄', bg: '#fff7ed', border: '#fed7aa' },
+          { title: 'Suppliers',        value: stats.suppliers.length, icon: '🏭', bg: '#f5f3ff', border: '#ddd6fe' },
+        ].map(card => (
+          <div key={card.title} style={cardStyle(card.bg, card.border)}>
+            <div>
+              <p style={{ fontSize: 11, color: '#64748b', marginBottom: 4 }}>{card.title}</p>
+              <p style={{ fontSize: 24, fontWeight: 700, color: '#0f172a' }}>{card.value}</p>
             </div>
+            <span style={{ fontSize: 28 }}>{card.icon}</span>
+          </div>
+        ))}
+      </div>
 
-            {/* Charts Row 1 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              {/* Transfer Status Pie Chart */}
-              <div className="bg-white rounded-xl border p-6">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Transfer Status Distribution</h2>
-                {transferStatusData().length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">No transfer data</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <PieChart>
-                      <Pie
-                        data={transferStatusData()}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={100}
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
-                      >
-                        {transferStatusData().map((_, index) => (
-                          <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+      {/* Charts Row 1 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={chartBoxStyle}>
+          <p style={chartTitleStyle}>Transfer Status Distribution</p>
+          {transferStatusData().length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8', fontSize: 13 }}>No transfer data</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie data={transferStatusData()} cx="50%" cy="50%" outerRadius={100} dataKey="value"
+                  label={({ name, value }) => `${name}: ${value}`}>
+                  {transferStatusData().map((_, index) => (
+                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
 
-              {/* Items by Category */}
-              <div className="bg-white rounded-xl border p-6">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Items by Category</h2>
-                {itemsByCategoryData().length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">No items data</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={itemsByCategoryData()}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
-            </div>
+        <div style={chartBoxStyle}>
+          <p style={chartTitleStyle}>Items by Category</p>
+          {itemsByCategoryData().length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8', fontSize: 13 }}>No items data</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={itemsByCategoryData()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
 
-            {/* Charts Row 2 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              {/* Transfers by Branch */}
-              <div className="bg-white rounded-xl border p-6">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">Transfers by Branch</h2>
-                {transfersByBranchData().length === 0 ? (
-                  <div className="text-center py-8 text-gray-400">No transfer data</div>
-                ) : (
-                  <ResponsiveContainer width="100%" height={280}>
-                    <BarChart data={transfersByBranchData()}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="transfers" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                )}
-              </div>
+      {/* Charts Row 2 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div style={chartBoxStyle}>
+          <p style={chartTitleStyle}>Transfers by Branch</p>
+          {transfersByBranchData().length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8', fontSize: 13 }}>No transfer data</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={transfersByBranchData()}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="transfers" fill="#10b981" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
 
-              {/* System Summary */}
-              <div className="bg-white rounded-xl border p-6">
-                <h2 className="text-lg font-semibold text-gray-800 mb-4">System Summary</h2>
-                <div className="space-y-4">
-                  <SummaryRow label="Active Branches" value={stats.branches.filter(b => b.active).length} total={stats.branches.length} color="blue" />
-                  <SummaryRow label="Active Items" value={stats.items.filter(i => i.active).length} total={stats.items.length} color="green" />
-                  <SummaryRow label="Pending Transfers" value={stats.transfers.filter(t => t.status === 'PENDING').length} total={stats.transfers.length} color="yellow" />
-                  <SummaryRow label="Completed Transfers" value={stats.transfers.filter(t => t.status === 'COMPLETED').length} total={stats.transfers.length} color="purple" />
-                  <SummaryRow label="Active Suppliers" value={stats.suppliers.filter(s => s.active).length} total={stats.suppliers.length} color="orange" />
+        <div style={chartBoxStyle}>
+          <p style={chartTitleStyle}>System Summary</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {[
+              { label: 'Active Branches',      value: stats.branches.filter(b => b.active).length,               total: stats.branches.length,  color: '#3b82f6' },
+              { label: 'Active Items',         value: stats.items.filter(i => i.active).length,                  total: stats.items.length,     color: '#10b981' },
+              { label: 'Pending Transfers',    value: stats.transfers.filter(t => t.status === 'PENDING').length, total: stats.transfers.length, color: '#f59e0b' },
+              { label: 'Completed Transfers',  value: stats.transfers.filter(t => t.status === 'COMPLETED').length, total: stats.transfers.length, color: '#8b5cf6' },
+              { label: 'Active Suppliers',     value: stats.suppliers.filter(s => s.active).length,              total: stats.suppliers.length, color: '#f97316' },
+            ].map(row => {
+              const percent = row.total > 0 ? Math.round((row.value / row.total) * 100) : 0;
+              return (
+                <div key={row.label}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 4 }}>
+                    <span style={{ color: '#475569' }}>{row.label}</span>
+                    <span style={{ fontWeight: 500, color: '#0f172a' }}>{row.value} / {row.total}</span>
+                  </div>
+                  <div style={{ width: '100%', background: '#f1f5f9', borderRadius: 99, height: 6 }}>
+                    <div style={{ width: `${percent}%`, background: row.color, borderRadius: 99, height: 6, transition: 'width 0.4s' }} />
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            {/* Recent Transfers Table */}
-            <div className="bg-white rounded-xl border p-6">
-              <h2 className="text-lg font-semibold text-gray-800 mb-4">Recent Transfers</h2>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b">
-                    <tr>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Item</th>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">From</th>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">To</th>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Qty</th>
-                      <th className="text-left px-4 py-2 text-xs font-medium text-gray-500 uppercase">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {stats.transfers.slice(0, 5).map(t => (
-                      <tr key={t.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-800">{t.item?.name}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{t.fromBranch?.name}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{t.toBranch?.name}</td>
-                        <td className="px-4 py-3 text-sm text-gray-800">{t.quantity}</td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                            {t.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SummaryCard({ title, value, icon, color }) {
-  const colors = {
-    blue: 'border-blue-200 bg-blue-50',
-    green: 'border-green-200 bg-green-50',
-    orange: 'border-orange-200 bg-orange-50',
-    purple: 'border-purple-200 bg-purple-50',
-  };
-  return (
-    <div className={`border rounded-xl p-4 ${colors[color]}`}>
-      <div className="flex justify-between items-center">
-        <div>
-          <p className="text-xs text-gray-500">{title}</p>
-          <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
+              );
+            })}
+          </div>
         </div>
-        <span className="text-3xl">{icon}</span>
       </div>
-    </div>
-  );
-}
 
-function SummaryRow({ label, value, total, color }) {
-  const percent = total > 0 ? Math.round((value / total) * 100) : 0;
-  const colors = {
-    blue: 'bg-blue-500',
-    green: 'bg-green-500',
-    yellow: 'bg-yellow-500',
-    purple: 'bg-purple-500',
-    orange: 'bg-orange-500',
-  };
-  return (
-    <div>
-      <div className="flex justify-between text-sm mb-1">
-        <span className="text-gray-600">{label}</span>
-        <span className="font-medium text-gray-800">{value} / {total}</span>
+      {/* Recent Transfers Table */}
+      <div style={chartBoxStyle}>
+        <p style={chartTitleStyle}>Recent Transfers</p>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                {['Item', 'From', 'To', 'Qty', 'Status'].map(h => (
+                  <th key={h} style={{
+                    textAlign: 'left', padding: '10px 16px',
+                    fontSize: 11, fontWeight: 600, color: '#94a3b8',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {stats.transfers.slice(0, 5).map(t => (
+                <tr key={t.id} style={{ borderBottom: '1px solid #f1f5f9' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>{t.item?.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#475569' }}>{t.fromBranch?.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#475569' }}>{t.toBranch?.name}</td>
+                  <td style={{ padding: '12px 16px', fontSize: 13, color: '#0f172a' }}>{t.quantity}</td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <span style={{ background: '#dbeafe', color: '#1d4ed8', padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600 }}>
+                      {t.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div className="w-full bg-gray-100 rounded-full h-2">
-        <div className={`h-2 rounded-full ${colors[color]}`} style={{ width: `${percent}%` }}></div>
-      </div>
-    </div>
+    </PageLayout>
   );
 }

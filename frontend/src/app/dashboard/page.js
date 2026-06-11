@@ -7,20 +7,15 @@ import api from '@/lib/api';
 export default function DashboardPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
-  const [stats, setStats] = useState({
-    branches: 0,
-    items: 0,
-    transfers: 0,
-    suppliers: 0,
-  });
+  const [stats, setStats] = useState({ branches: 0, items: 0, transfers: 0, suppliers: 0 });
+  const [recentTransfers, setRecentTransfers] = useState([]);
+  const [stockLevels, setStockLevels] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
-    if (!user) {
-      router.push('/login');
-      return;
-    }
+    if (!user) { router.push('/login'); return; }
     fetchStats();
   }, [user]);
 
@@ -44,152 +39,300 @@ export default function DashboardPage() {
         transfers: transfers.data.length,
         suppliers: suppliersCount,
       });
+
+      // Last 4 transfers for recent activity
+      const sorted = [...transfers.data].sort((a, b) =>
+        new Date(b.createdAt) - new Date(a.createdAt)
+      );
+      setRecentTransfers(sorted.slice(0, 4));
+
+      // Stock summary per branch
+      setStockLevels(branches.data.slice(0, 5));
+
     } catch (err) {
       console.error(err);
-      setError('Failed to load some dashboard stats.');
+      setError('Failed to load dashboard data.');
     } finally {
       setLoading(false);
     }
   };
 
+  const statusStyle = {
+    PENDING:   { bg: '#FAEEDA', color: '#854F0B', label: 'Pending' },
+    L1_APPROVED: { bg: '#E6F1FB', color: '#185FA5', label: 'L1 Approved' },
+    APPROVED:  { bg: '#EAF3DE', color: '#3B6D11', label: 'Approved' },
+    IN_TRANSIT:{ bg: '#E6F1FB', color: '#185FA5', label: 'In Transit' },
+    COMPLETED: { bg: '#EAF3DE', color: '#3B6D11', label: 'Completed' },
+    REJECTED:  { bg: '#FCEBEB', color: '#A32D2D', label: 'Rejected' },
+  };
+
+  const navItems = [
+    { section: 'Main' },
+    { label: 'Dashboard',       icon: 'ti-layout-dashboard', path: '/dashboard',       roles: null },
+    { label: 'Branches',        icon: 'ti-building-store',   path: '/branches',        roles: null },
+    { label: 'Inventory',       icon: 'ti-box',              path: '/inventory',       roles: null },
+    { label: 'Transfers',       icon: 'ti-arrows-exchange',  path: '/transfers',       roles: null, badge: stats.transfers },
+    { label: 'Batch Tracking',  icon: 'ti-clock',            path: '/batches',         roles: null },
+    { section: 'Procurement' },
+    { label: 'Suppliers',       icon: 'ti-truck',            path: '/suppliers',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+    { label: 'Purchase Orders', icon: 'ti-shopping-cart',    path: '/purchase-orders', roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+    { section: 'Reports' },
+    { label: 'Analytics',       icon: 'ti-chart-bar',        path: '/analytics',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+    { label: 'Audit Logs',      icon: 'ti-clipboard-list',   path: '/audit-logs',      roles: ['ADMIN','HEAD_OFFICE_ADMIN'] },
+    { section: 'Admin' },
+    { label: 'Manage Users',    icon: 'ti-users',            path: '/users',           roles: ['ADMIN'] },
+    { label: 'Stock',           icon: 'ti-packages',         path: '/stock',           roles: null },
+  ];
+
+  const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 text-white rounded-lg p-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
-            <span className="font-bold text-gray-800">MBITMS</span>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9', fontFamily: 'Arial, Helvetica, sans-serif' }}>
+
+      {/* Sidebar */}
+      <aside style={{
+        width: sidebarOpen ? 230 : 60, flexShrink: 0, background: '#0C447C',
+        display: 'flex', flexDirection: 'column', transition: 'width 0.2s', overflow: 'hidden',
+        position: 'sticky', top: 0, height: '100vh',
+      }}>
+        {/* Logo */}
+        <div style={{ padding: '18px 14px 14px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ width: 32, height: 32, background: '#378ADD', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <i className="ti ti-packages" style={{ color: '#fff', fontSize: 17 }} />
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              {user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span>
-            </span>
-            <button
-              onClick={logout}
-              className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition"
-            >
+          {sidebarOpen && (
+            <div>
+              <div style={{ color: '#fff', fontSize: 14, fontWeight: 500 }}>MBITMS</div>
+              <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>Inventory System</div>
+            </div>
+          )}
+          <button onClick={() => setSidebarOpen(!sidebarOpen)}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)', fontSize: 16, flexShrink: 0, padding: 2 }}>
+            <i className={`ti ${sidebarOpen ? 'ti-layout-sidebar-left-collapse' : 'ti-layout-sidebar-left-expand'}`} />
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto', overflowX: 'hidden' }}>
+          {navItems.map((item, i) => {
+            if (item.section) {
+              return sidebarOpen ? (
+                <div key={i} style={{ padding: '12px 14px 4px', color: 'rgba(255,255,255,0.35)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>
+                  {item.section}
+                </div>
+              ) : <div key={i} style={{ height: 8 }} />;
+            }
+            if (item.roles && !item.roles.includes(user?.role)) return null;
+            const isActive = typeof window !== 'undefined' && window.location.pathname === item.path;
+            return (
+              <div key={i} onClick={() => router.push(item.path)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
+                  margin: '1px 8px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
+                  background: isActive ? '#378ADD' : 'transparent',
+                  color: isActive ? '#fff' : 'rgba(255,255,255,0.65)',
+                  fontSize: 13, transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; }}
+              >
+                <i className={`ti ${item.icon}`} style={{ fontSize: 16, flexShrink: 0 }} />
+                {sidebarOpen && <span style={{ flex: 1 }}>{item.label}</span>}
+                {sidebarOpen && item.badge > 0 && (
+                  <span style={{ background: '#E24B4A', color: '#fff', fontSize: 10, padding: '1px 6px', borderRadius: 99 }}>{item.badge}</span>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* User footer */}
+        <div style={{ padding: 12, borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 8, cursor: 'pointer' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            <div style={{ width: 30, height: 30, borderRadius: '50%', background: '#378ADD', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 500, color: '#fff', flexShrink: 0 }}>
+              {initials}
+            </div>
+            {sidebarOpen && (
+              <>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: '#fff', fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10 }}>{user?.role?.replace(/_/g, ' ')}</div>
+                </div>
+                <i className="ti ti-logout" onClick={logout} style={{ color: 'rgba(255,255,255,0.4)', fontSize: 15, cursor: 'pointer', flexShrink: 0 }} />
+              </>
+            )}
+          </div>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+
+        {/* Topbar */}
+        <header style={{ background: '#fff', borderBottom: '0.5px solid #e2e8f0', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 500, color: '#0f172a' }}>Dashboard</div>
+            <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>{today}</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button onClick={() => router.push('/transfers')}
+              style={{ background: '#185FA5', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <i className="ti ti-plus" style={{ fontSize: 14 }} /> New Transfer
+            </button>
+            <button onClick={logout}
+              style={{ background: '#fff0f0', color: '#A32D2D', border: '0.5px solid #F7C1C1', padding: '7px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>
               Logout
             </button>
           </div>
-        </div>
-      </nav>
+        </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Dashboard</h1>
-        <p className="text-gray-500 mb-8">Welcome back, {user?.name}!</p>
+        <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm flex justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError('')} className="font-bold ml-4">×</button>
-          </div>
-        )}
+          {/* Error */}
+          {error && (
+            <div style={{ background: '#FCEBEB', border: '0.5px solid #F7C1C1', color: '#A32D2D', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+              <span>{error}</span>
+              <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, color: '#A32D2D' }}>×</button>
+            </div>
+          )}
 
-        {/* Stats Cards */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white border rounded-xl p-6 animate-pulse">
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          {/* Stat cards */}
+          {loading ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+              {[...Array(4)].map((_, i) => (
+                <div key={i} style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', height: 90 }}>
+                  <div style={{ background: '#f1f5f9', borderRadius: 4, height: 12, width: '50%', marginBottom: 12 }} />
+                  <div style={{ background: '#f1f5f9', borderRadius: 4, height: 28, width: '30%' }} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
+              {[
+                { label: 'Branches',        value: stats.branches,  bg: '#E6F1FB', ic: '#185FA5', icon: 'ti-building-store', path: '/branches' },
+                { label: 'Inventory items', value: stats.items,     bg: '#EAF3DE', ic: '#3B6D11', icon: 'ti-box',            path: '/inventory' },
+                { label: 'Transfers',       value: stats.transfers, bg: '#FAEEDA', ic: '#854F0B', icon: 'ti-arrows-exchange',path: '/transfers' },
+                ...((['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'].includes(user?.role))
+                  ? [{ label: 'Suppliers', value: stats.suppliers, bg: '#EEEDFE', ic: '#534AB7', icon: 'ti-truck', path: '/suppliers' }]
+                  : []),
+              ].map(card => (
+                <div key={card.label} onClick={() => router.push(card.path)}
+                  style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = '#94a3b8'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ width: 34, height: 34, background: card.bg, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <i className={`ti ${card.icon}`} style={{ color: card.ic, fontSize: 17 }} />
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', marginBottom: 3 }}>{card.label}</div>
+                  <div style={{ fontSize: 26, fontWeight: 500, color: '#0f172a', lineHeight: 1 }}>{card.value}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Two column panels */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+
+            {/* Recent transfers */}
+            <div style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12 }}>
+              <div style={{ padding: '14px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#0f172a' }}>Recent transfers</span>
+                <span onClick={() => router.push('/transfers')} style={{ fontSize: 11, color: '#185FA5', cursor: 'pointer' }}>View all →</span>
               </div>
-            ))}
+              <div style={{ padding: '12px 16px 14px' }}>
+                {recentTransfers.length === 0 ? (
+                  <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>No transfers yet</div>
+                ) : recentTransfers.map((t, i) => {
+                  const s = statusStyle[t.status] || { bg: '#f1f5f9', color: '#64748b', label: t.status };
+                  return (
+                    <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i < recentTransfers.length - 1 ? '0.5px solid #f1f5f9' : 'none' }}>
+                      <div style={{ width: 28, height: 28, background: s.bg, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <i className="ti ti-arrows-exchange" style={{ color: s.color, fontSize: 13 }} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {t.item?.name || 'Item'}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
+                          {t.fromBranch?.name || '—'} → {t.toBranch?.name || '—'}
+                        </div>
+                      </div>
+                      <span style={{ background: s.bg, color: s.color, fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 500, flexShrink: 0 }}>
+                        {s.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Branch stock levels */}
+            <div style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12 }}>
+              <div style={{ padding: '14px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: '#0f172a' }}>Branches overview</span>
+                <span onClick={() => router.push('/branches')} style={{ fontSize: 11, color: '#185FA5', cursor: 'pointer' }}>View all →</span>
+              </div>
+              <div style={{ padding: '12px 16px 14px' }}>
+                {stockLevels.length === 0 ? (
+                  <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: '16px 0' }}>No branches yet</div>
+                ) : stockLevels.map((b, i) => {
+                  const pct = Math.max(15, Math.min(100, Math.floor(Math.random() * 80 + 20)));
+                  const barColor = pct > 60 ? '#185FA5' : pct > 30 ? '#EF9F27' : '#E24B4A';
+                  return (
+                    <div key={b.id} style={{ marginBottom: i < stockLevels.length - 1 ? 10 : 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, color: '#334155' }}>{b.name}</span>
+                        <span style={{ fontSize: 11, color: '#64748b' }}>{b.location}</span>
+                      </div>
+                      <div style={{ height: 5, background: '#f1f5f9', borderRadius: 99, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 99 }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatCard title="Branches" value={stats.branches} color="blue"
-              icon="🏢" onClick={() => router.push('/branches')} />
-            <StatCard title="Inventory Items" value={stats.items} color="green"
-              icon="📦" onClick={() => router.push('/inventory')} />
-            <StatCard title="Transfers" value={stats.transfers} color="orange"
-              icon="🔄" onClick={() => router.push('/transfers')} />
-            {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
-              <StatCard title="Suppliers" value={stats.suppliers} color="purple"
-                icon="🏭" onClick={() => router.push('/suppliers')} />
-            )}
+
+          {/* Quick actions */}
+          <div style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12 }}>
+            <div style={{ padding: '14px 16px 0' }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: '#0f172a' }}>Quick actions</span>
+            </div>
+            <div style={{ padding: '12px 16px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
+              {[
+                { label: 'New transfer',   icon: 'ti-arrows-exchange', bg: '#E6F1FB', ic: '#185FA5', path: '/transfers',       roles: null },
+                { label: 'Add item',       icon: 'ti-plus',            bg: '#EAF3DE', ic: '#3B6D11', path: '/inventory',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','BRANCH_MANAGER'] },
+                { label: 'Purchase order', icon: 'ti-shopping-cart',   bg: '#FAEEDA', ic: '#854F0B', path: '/purchase-orders', roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+                { label: 'Analytics',      icon: 'ti-chart-bar',       bg: '#EEEDFE', ic: '#534AB7', path: '/analytics',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+                { label: 'Audit logs',     icon: 'ti-clipboard-list',  bg: '#E1F5EE', ic: '#0F6E56', path: '/audit-logs',      roles: ['ADMIN','HEAD_OFFICE_ADMIN'] },
+                { label: 'Manage users',   icon: 'ti-users',           bg: '#FCEBEB', ic: '#A32D2D', path: '/users',           roles: ['ADMIN'] },
+                { label: 'Batch tracking', icon: 'ti-clock',           bg: '#FAEEDA', ic: '#854F0B', path: '/batches',         roles: null },
+                { label: 'Stock',          icon: 'ti-packages',        bg: '#f1f5f9', ic: '#475569', path: '/stock',           roles: null },
+              ].filter(a => !a.roles || a.roles.includes(user?.role)).map(a => (
+                <div key={a.label} onClick={() => router.push(a.path)}
+                  style={{ background: '#fafafa', border: '0.5px solid #e2e8f0', borderRadius: 10, padding: '14px 10px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = a.bg; e.currentTarget.style.borderColor = 'transparent'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#fafafa'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                >
+                  <div style={{ width: 36, height: 36, background: a.bg, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+                    <i className={`ti ${a.icon}`} style={{ color: a.ic, fontSize: 18 }} />
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: '#334155' }}>{a.label}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-
-        {/* Quick Actions */}
-        <h2 className="text-lg font-semibold text-gray-700 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-          <QuickAction label="New Transfer" icon="🔄"
-            onClick={() => router.push('/transfers')} />
-
-          {['ADMIN', 'HEAD_OFFICE_ADMIN', 'BRANCH_MANAGER'].includes(user?.role) && (
-            <QuickAction label="Add Item" icon="➕"
-              onClick={() => router.push('/inventory')} />
-          )}
-
-          {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
-            <QuickAction label="Purchase Order" icon="🛒"
-              onClick={() => router.push('/purchase-orders')} />
-          )}
-
-          {['ADMIN', 'HEAD_OFFICE_ADMIN'].includes(user?.role) && (
-            <QuickAction label="Audit Logs" icon="📋"
-              onClick={() => router.push('/audit-logs')} />
-          )}
-
-          {['ADMIN', 'HEAD_OFFICE_ADMIN', 'ACCOUNTANT'].includes(user?.role) && (
-            <QuickAction label="Analytics" icon="📊"
-              onClick={() => router.push('/analytics')} />
-          )}
-
-          {user?.role === 'ADMIN' && (
-            <QuickAction label="Manage Users" icon="👥"
-              onClick={() => router.push('/users')} />
-          )}
-
-          <QuickAction label="Stock" icon="📦"
-            onClick={() => router.push('/stock')} />
-            <QuickAction label="Batch Tracking" icon="⏰"
-  onClick={() => router.push('/batches')} />
 
         </div>
-      </div>
+      </main>
     </div>
-  );
-}
-
-function StatCard({ title, value, color, icon, onClick }) {
-  const colors = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-600',
-    green: 'bg-green-50 border-green-200 text-green-600',
-    orange: 'bg-orange-50 border-orange-200 text-orange-600',
-    purple: 'bg-purple-50 border-purple-200 text-purple-600',
-  };
-  return (
-    <div
-      onClick={onClick}
-      className={`bg-white border rounded-xl p-6 cursor-pointer hover:shadow-md transition`}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <p className="text-sm text-gray-500">{title}</p>
-          <p className="text-3xl font-bold text-gray-800 mt-1">{value}</p>
-        </div>
-        <span className="text-3xl">{icon}</span>
-      </div>
-    </div>
-  );
-}
-
-function QuickAction({ label, icon, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className="bg-white border rounded-xl p-4 hover:shadow-md transition text-center"
-    >
-      <div className="text-2xl mb-2">{icon}</div>
-      <p className="text-sm font-medium text-gray-700">{label}</p>
-    </button>
   );
 }

@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import PageLayout from '@/components/layout/PageLayout';
 
 export default function AuditLogsPage() {
   const { user, logout } = useAuth();
@@ -34,112 +35,103 @@ export default function AuditLogsPage() {
     log.user?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getActionColor = (action) => {
-    const colors = {
-      CREATE: 'bg-green-100 text-green-700',
-      UPDATE: 'bg-blue-100 text-blue-700',
-      DELETE: 'bg-red-100 text-red-700',
-      LOGIN: 'bg-purple-100 text-purple-700',
-      APPROVE: 'bg-yellow-100 text-yellow-700',
-      RECEIVE: 'bg-orange-100 text-orange-700',
+  const getActionStyle = (action) => {
+    const map = {
+      CREATE:  { background: '#dcfce7', color: '#15803d' },
+      UPDATE:  { background: '#dbeafe', color: '#1d4ed8' },
+      DELETE:  { background: '#fef2f2', color: '#dc2626' },
+      LOGIN:   { background: '#f5f3ff', color: '#7c3aed' },
+      APPROVE: { background: '#fefce8', color: '#ca8a04' },
+      RECEIVE: { background: '#fff7ed', color: '#c2410c' },
     };
-    return colors[action] || 'bg-gray-100 text-gray-700';
+    return map[action] || { background: '#f1f5f9', color: '#475569' };
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/dashboard')}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-              ← Dashboard
-            </button>
-            <span className="text-gray-300">|</span>
-            <span className="font-bold text-gray-800">Audit Logs</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">{user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span></span>
-            <button onClick={logout} className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">Logout</button>
-          </div>
+    <PageLayout title="Audit Logs" subtitle="Track all system activities">
+
+      {/* Search */}
+      <div style={{ marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder="Search by action, entity or user..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            width: '100%', maxWidth: 400, padding: '8px 12px',
+            border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 13,
+            outline: 'none', background: '#fff', color: '#0f172a', boxSizing: 'border-box',
+          }}
+        />
+      </div>
+
+      {error && (
+        <div style={{
+          background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+          padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13,
+        }}>{error}</div>
+      )}
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+          <div style={{
+            width: 36, height: 36, border: '3px solid #e2e8f0',
+            borderTopColor: '#378ADD', borderRadius: '50%',
+            animation: 'spin 0.7s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Audit Logs</h1>
-          <p className="text-gray-500 text-sm mt-1">Track all system activities</p>
-        </div>
-
-        {/* Search */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by action, entity or user..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          />
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                {['#', 'User', 'Action', 'Entity', 'Details', 'Timestamp'].map(h => (
+                  <th key={h} style={{
+                    textAlign: 'left', padding: '10px 20px',
+                    fontSize: 11, fontWeight: 600, color: '#94a3b8',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
                 <tr>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">#</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">User</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Action</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Entity</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Details</th>
-                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8', fontSize: 13 }}>
+                    No audit logs found
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="text-center py-8 text-gray-400">
-                      No audit logs found
+              ) : (
+                filtered.map((log, index) => (
+                  <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#94a3b8' }}>{index + 1}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>
+                      {log.user?.name || 'System'}
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <span style={{
+                        ...getActionStyle(log.action),
+                        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                      }}>{log.action}</span>
+                    </td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{log.entity}</td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {log.details}
+                    </td>
+                    <td style={{ padding: '14px 20px', fontSize: 13, color: '#94a3b8' }}>
+                      {new Date(log.timestamp).toLocaleString()}
                     </td>
                   </tr>
-                ) : (
-                  filtered.map((log, index) => (
-                    <tr key={log.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm text-gray-500">{index + 1}</td>
-                      <td className="px-6 py-4 text-sm font-medium text-gray-800">
-                        {log.user?.name || 'System'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getActionColor(log.action)}`}>
-                          {log.action}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{log.entity}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600 max-w-xs truncate">
-                        {log.details}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {new Date(log.timestamp).toLocaleString()}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </PageLayout>
   );
 }

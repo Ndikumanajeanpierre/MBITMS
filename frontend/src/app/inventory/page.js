@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import PageLayout from '@/components/layout/PageLayout';
 
 const BACKEND_URL = 'http://localhost:8080';
 const CAN_MANAGE = ['ADMIN', 'HEAD_OFFICE_ADMIN', 'BRANCH_MANAGER'];
@@ -137,246 +138,233 @@ export default function InventoryPage() {
     i.category?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const inputStyle = {
+    width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0',
+    borderRadius: 8, fontSize: 13, outline: 'none', boxSizing: 'border-box',
+    background: '#fff', color: '#0f172a',
+  };
+  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 500, color: '#64748b', marginBottom: 4 };
+
+  const actions = (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+      <button onClick={handleExportCSV} style={{
+        background: '#16a34a', color: '#fff', border: 'none', borderRadius: 8,
+        padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+      }}>Export CSV</button>
+      {canManage && (
+        <>
+          <label style={{
+            background: '#ea580c', color: '#fff', border: 'none', borderRadius: 8,
+            padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>
+            Import CSV
+            <input type="file" accept=".csv" onChange={handleImportCSV} style={{ display: 'none' }} />
+          </label>
+          <button onClick={downloadTemplate} style={{
+            background: '#475569', color: '#fff', border: 'none', borderRadius: 8,
+            padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>CSV Template</button>
+          <button onClick={() => { setShowForm(true); setEditItem(null); setFormData({ name: '', code: '', category: '', unit: '' }); }} style={{
+            background: '#378ADD', color: '#fff', border: 'none', borderRadius: 8,
+            padding: '8px 14px', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+          }}>+ Add Item</button>
+        </>
+      )}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <button onClick={() => router.push('/dashboard')}
-              className="text-blue-600 hover:text-blue-800 font-medium text-sm">
-              ← Dashboard
-            </button>
-            <span className="text-gray-300">|</span>
-            <span className="font-bold text-gray-800">Inventory</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600">
-              {user?.name} — <span className="text-blue-600 font-medium">{user?.role}</span>
-            </span>
-            <button onClick={logout}
-              className="text-sm bg-red-50 text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
-              Logout
-            </button>
+    <PageLayout title="Inventory Management" subtitle="Manage all inventory items" actions={actions}>
+
+      {/* Search */}
+      <div style={{ marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder="Search by name, code or category..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ ...inputStyle, maxWidth: 400 }}
+        />
+      </div>
+
+      {/* Alerts */}
+      {error && (
+        <div style={{
+          background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626',
+          padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          {error}
+          <button onClick={() => setError('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontWeight: 700, fontSize: 16 }}>×</button>
+        </div>
+      )}
+      {success && (
+        <div style={{
+          background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d',
+          padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13,
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
+          {success}
+          <button onClick={() => setSuccess('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#15803d', fontWeight: 700, fontSize: 16 }}>×</button>
+        </div>
+      )}
+
+      {/* Form Modal */}
+      {showForm && canManage && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 12, padding: 24, width: '100%', maxWidth: 460 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, color: '#0f172a', marginBottom: 16 }}>
+              {editItem ? 'Edit Item' : 'Add New Item'}
+            </h2>
+            <form onSubmit={handleSubmit}>
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Item Name</label>
+                <input required value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g. Paracetamol 500mg" style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Item Code</label>
+                <input required value={formData.code}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  disabled={!!editItem}
+                  placeholder="e.g. MED-001"
+                  style={{ ...inputStyle, background: editItem ? '#f8fafc' : '#fff', color: editItem ? '#94a3b8' : '#0f172a' }} />
+              </div>
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelStyle}>Category</label>
+                <input value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  placeholder="e.g. Medicine" style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <label style={labelStyle}>Unit</label>
+                <input value={formData.unit}
+                  onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                  placeholder="e.g. Box, Pack, Piece" style={inputStyle} />
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button type="submit" style={{
+                  flex: 1, background: '#378ADD', color: '#fff', border: 'none',
+                  borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                }}>{editItem ? 'Update' : 'Create'}</button>
+                <button type="button" onClick={() => { setShowForm(false); setEditItem(null); }} style={{
+                  flex: 1, background: '#f1f5f9', color: '#475569', border: 'none',
+                  borderRadius: 8, padding: '10px 0', fontSize: 13, fontWeight: 500, cursor: 'pointer',
+                }}>Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
-      </nav>
+      )}
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800">Inventory Management</h1>
-            <p className="text-gray-500 text-sm mt-1">Manage all inventory items</p>
-          </div>
-          <div className="flex gap-2 flex-wrap justify-end">
-            {/* Export/Import visible to all */}
-            <button onClick={handleExportCSV}
-              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium">
-              Export CSV
-            </button>
-
-            {/* Import and template only for managers+ */}
-            {canManage && (
-              <>
-                <label className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm font-medium cursor-pointer">
-                  Import CSV
-                  <input type="file" accept=".csv" onChange={handleImportCSV} className="hidden" />
-                </label>
-                <button onClick={downloadTemplate}
-                  className="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition text-sm font-medium">
-                  CSV Template
-                </button>
-                <button
-                  onClick={() => { setShowForm(true); setEditItem(null); setFormData({ name: '', code: '', category: '', unit: '' }); }}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium">
-                  + Add Item
-                </button>
-              </>
-            )}
-          </div>
+      {/* Table */}
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+          <div style={{
+            width: 36, height: 36, border: '3px solid #e2e8f0',
+            borderTopColor: '#378ADD', borderRadius: '50%',
+            animation: 'spin 0.7s linear infinite',
+          }} />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
-
-        {/* Search */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Search by name, code or category..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-          />
-        </div>
-
-        {/* Alerts */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm flex justify-between">
-            {error}
-            <button onClick={() => setError('')} className="font-bold">x</button>
-          </div>
-        )}
-        {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm flex justify-between">
-            {success}
-            <button onClick={() => setSuccess('')} className="font-bold">x</button>
-          </div>
-        )}
-
-        {/* Form Modal */}
-        {showForm && canManage && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-6 w-full max-w-md">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">
-                {editItem ? 'Edit Item' : 'Add New Item'}
-              </h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
-                  <input required value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. Paracetamol 500mg" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Item Code</label>
-                  <input required value={formData.code}
-                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                    disabled={!!editItem}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-gray-100"
-                    placeholder="e.g. MED-001" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                  <input value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. Medicine" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
-                  <input value={formData.unit}
-                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="e.g. Box, Pack, Piece" />
-                </div>
-                <div className="flex gap-3 pt-2">
-                  <button type="submit"
-                    className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition font-medium">
-                    {editItem ? 'Update' : 'Create'}
-                  </button>
-                  <button type="button"
-                    onClick={() => { setShowForm(false); setEditItem(null); }}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 rounded-lg hover:bg-gray-200 transition font-medium">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Table */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                {['#', 'Image', 'Name', 'Code', 'Category', 'Unit', 'Status', ...(canManage ? ['Actions'] : [])].map(h => (
+                  <th key={h} style={{
+                    textAlign: 'left', padding: '10px 16px',
+                    fontSize: 11, fontWeight: 600, color: '#94a3b8',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
                 <tr>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">#</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Image</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Code</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Category</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Unit</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  {canManage && (
-                    <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  )}
+                  <td colSpan={canManage ? 8 : 7} style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8', fontSize: 13 }}>
+                    No items found
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={canManage ? 8 : 7} className="text-center py-8 text-gray-400">
-                      No items found
+              ) : (
+                filtered.map((item, index) => (
+                  <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#94a3b8' }}>{index + 1}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{
+                        width: 56, height: 56, borderRadius: 8, overflow: 'hidden',
+                        border: '1px solid #e2e8f0', background: '#f8fafc',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {item.imageUrl ? (
+                          <img src={BACKEND_URL + item.imageUrl} alt={item.name}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.target.style.display = 'none'; }} />
+                        ) : canManage ? (
+                          <label style={{ cursor: 'pointer', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
+                            <span style={{ fontSize: 18, color: '#cbd5e1' }}>+</span>
+                            <span style={{ fontSize: 10, color: '#cbd5e1' }}>Photo</span>
+                            <input type="file" accept="image/*" style={{ display: 'none' }}
+                              onChange={(e) => handleImageUpload(item.id, e.target.files[0])} />
+                          </label>
+                        ) : (
+                          <span style={{ fontSize: 22 }}>📦</span>
+                        )}
+                      </div>
                     </td>
-                  </tr>
-                ) : (
-                  filtered.map((item, index) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition">
-                      <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
-
-                      {/* ✅ Fixed image cell — larger, proper fit, full URL */}
-                      <td className="px-4 py-3">
-                        <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-50 flex items-center justify-center">
-                          {item.imageUrl ? (
-                            <img
-                              src={BACKEND_URL + item.imageUrl}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                              onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                          ) : canManage ? (
-                            <label className="cursor-pointer w-full h-full flex items-center justify-center">
-                              <div className="flex flex-col items-center text-gray-400 hover:text-blue-500 transition">
-                                <span className="text-xl">+</span>
-                                <span className="text-xs">Photo</span>
-                              </div>
-                              <input type="file" accept="image/*" className="hidden"
-                                onChange={(e) => handleImageUpload(item.id, e.target.files[0])} />
-                            </label>
-                          ) : (
-                            <span className="text-gray-300 text-2xl">📦</span>
+                    <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 500, color: '#0f172a' }}>{item.name}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: 4, fontSize: 11, fontFamily: 'monospace', color: '#475569' }}>{item.code}</span>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#475569' }}>{item.category}</td>
+                    <td style={{ padding: '12px 16px', fontSize: 13, color: '#475569' }}>{item.unit}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{
+                        background: item.active ? '#dcfce7' : '#fef2f2',
+                        color: item.active ? '#15803d' : '#dc2626',
+                        padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 600,
+                      }}>{item.active ? 'Active' : 'Inactive'}</span>
+                    </td>
+                    {canManage && (
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => handleEdit(item)} style={{
+                            background: '#eff6ff', color: '#378ADD', border: 'none',
+                            borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                          }}>Edit</button>
+                          <label style={{
+                            background: '#f5f3ff', color: '#7c3aed', border: 'none',
+                            borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                          }}>
+                            Photo
+                            <input type="file" accept="image/*" style={{ display: 'none' }}
+                              onChange={(e) => handleImageUpload(item.id, e.target.files[0])} />
+                          </label>
+                          {canDelete && (
+                            <button onClick={() => handleDelete(item.id)} style={{
+                              background: '#fef2f2', color: '#dc2626', border: 'none',
+                              borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 500, cursor: 'pointer',
+                            }}>Deactivate</button>
                           )}
                         </div>
                       </td>
-
-                      <td className="px-4 py-3 font-medium text-gray-800">{item.name}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">
-                        <span className="bg-gray-100 px-2 py-1 rounded font-mono text-xs">{item.code}</span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.category}</td>
-                      <td className="px-4 py-3 text-sm text-gray-600">{item.unit}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          item.active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                        }`}>
-                          {item.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-
-                      {/* Actions — only for managers+ */}
-                      {canManage && (
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <button onClick={() => handleEdit(item)}
-                              className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100 transition">
-                              Edit
-                            </button>
-                            <label className="text-xs bg-purple-50 text-purple-600 px-3 py-1 rounded-lg hover:bg-purple-100 transition cursor-pointer">
-                              Photo
-                              <input type="file" accept="image/*" className="hidden"
-                                onChange={(e) => handleImageUpload(item.id, e.target.files[0])} />
-                            </label>
-                            {canDelete && (
-                              <button onClick={() => handleDelete(item.id)}
-                                className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-lg hover:bg-red-100 transition">
-                                Deactivate
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </div>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </PageLayout>
   );
 }
