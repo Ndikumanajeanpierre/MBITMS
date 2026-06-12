@@ -28,6 +28,16 @@ public class UserService {
         user.setName(updated.getName());
         user.setRole(updated.getRole());
         user.setBranch(updated.getBranch());
+
+        // ✅ Update email if provided and different from current
+        if (updated.getEmail() != null && !updated.getEmail().isBlank()
+                && !updated.getEmail().equals(user.getEmail())) {
+            if (userRepository.existsByEmail(updated.getEmail())) {
+                throw new RuntimeException("Email already in use by another user");
+            }
+            user.setEmail(updated.getEmail());
+        }
+
         User saved = userRepository.save(user);
 
         auditLogService.log(
@@ -36,6 +46,7 @@ public class UserService {
             "User",
             saved.getId().toString(),
             "User updated: " + saved.getName() + " — role: " + saved.getRole()
+                + " — email: " + saved.getEmail()
         );
 
         return saved;

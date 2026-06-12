@@ -40,13 +40,10 @@ export default function DashboardPage() {
         suppliers: suppliersCount,
       });
 
-      // Last 4 transfers for recent activity
       const sorted = [...transfers.data].sort((a, b) =>
         new Date(b.createdAt) - new Date(a.createdAt)
       );
       setRecentTransfers(sorted.slice(0, 4));
-
-      // Stock summary per branch
       setStockLevels(branches.data.slice(0, 5));
 
     } catch (err) {
@@ -58,12 +55,12 @@ export default function DashboardPage() {
   };
 
   const statusStyle = {
-    PENDING:   { bg: '#FAEEDA', color: '#854F0B', label: 'Pending' },
+    PENDING:     { bg: '#FAEEDA', color: '#854F0B', label: 'Pending' },
     L1_APPROVED: { bg: '#E6F1FB', color: '#185FA5', label: 'L1 Approved' },
-    APPROVED:  { bg: '#EAF3DE', color: '#3B6D11', label: 'Approved' },
-    IN_TRANSIT:{ bg: '#E6F1FB', color: '#185FA5', label: 'In Transit' },
-    COMPLETED: { bg: '#EAF3DE', color: '#3B6D11', label: 'Completed' },
-    REJECTED:  { bg: '#FCEBEB', color: '#A32D2D', label: 'Rejected' },
+    APPROVED:    { bg: '#EAF3DE', color: '#3B6D11', label: 'Approved' },
+    IN_TRANSIT:  { bg: '#E6F1FB', color: '#185FA5', label: 'In Transit' },
+    COMPLETED:   { bg: '#EAF3DE', color: '#3B6D11', label: 'Completed' },
+    REJECTED:    { bg: '#FCEBEB', color: '#A32D2D', label: 'Rejected' },
   };
 
   const navItems = [
@@ -76,12 +73,26 @@ export default function DashboardPage() {
     { section: 'Procurement' },
     { label: 'Suppliers',       icon: 'ti-truck',            path: '/suppliers',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
     { label: 'Purchase Orders', icon: 'ti-shopping-cart',    path: '/purchase-orders', roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+    { section: 'Finance' },
+    { label: 'Finance',         icon: 'ti-coin',             path: '/finance',         roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
     { section: 'Reports' },
     { label: 'Analytics',       icon: 'ti-chart-bar',        path: '/analytics',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
     { label: 'Audit Logs',      icon: 'ti-clipboard-list',   path: '/audit-logs',      roles: ['ADMIN','HEAD_OFFICE_ADMIN'] },
     { section: 'Admin' },
     { label: 'Manage Users',    icon: 'ti-users',            path: '/users',           roles: ['ADMIN'] },
     { label: 'Stock',           icon: 'ti-packages',         path: '/stock',           roles: null },
+  ];
+
+  const quickActions = [
+    { label: 'New transfer',   icon: 'ti-arrows-exchange', bg: '#E6F1FB', ic: '#185FA5', path: '/transfers',       roles: null },
+    { label: 'Add item',       icon: 'ti-plus',            bg: '#EAF3DE', ic: '#3B6D11', path: '/inventory',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','BRANCH_MANAGER'] },
+    { label: 'Purchase order', icon: 'ti-shopping-cart',   bg: '#FAEEDA', ic: '#854F0B', path: '/purchase-orders', roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+    { label: 'Finance',        icon: 'ti-coin',            bg: '#E1F5EE', ic: '#0F6E56', path: '/finance',         roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+    { label: 'Analytics',      icon: 'ti-chart-bar',       bg: '#EEEDFE', ic: '#534AB7', path: '/analytics',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
+    { label: 'Audit logs',     icon: 'ti-clipboard-list',  bg: '#E1F5EE', ic: '#0F6E56', path: '/audit-logs',      roles: ['ADMIN','HEAD_OFFICE_ADMIN'] },
+    { label: 'Manage users',   icon: 'ti-users',           bg: '#FCEBEB', ic: '#A32D2D', path: '/users',           roles: ['ADMIN'] },
+    { label: 'Batch tracking', icon: 'ti-clock',           bg: '#FAEEDA', ic: '#854F0B', path: '/batches',         roles: null },
+    { label: 'Stock',          icon: 'ti-packages',        bg: '#f1f5f9', ic: '#475569', path: '/stock',           roles: null },
   ];
 
   const initials = user?.name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U';
@@ -91,12 +102,7 @@ export default function DashboardPage() {
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9', fontFamily: 'Arial, Helvetica, sans-serif' }}>
 
       {/* Sidebar */}
-      <aside style={{
-        width: sidebarOpen ? 230 : 60, flexShrink: 0, background: '#0C447C',
-        display: 'flex', flexDirection: 'column', transition: 'width 0.2s', overflow: 'hidden',
-        position: 'sticky', top: 0, height: '100vh',
-      }}>
-        {/* Logo */}
+      <aside style={{ width: sidebarOpen ? 230 : 60, flexShrink: 0, background: '#0C447C', display: 'flex', flexDirection: 'column', transition: 'width 0.2s', overflow: 'hidden', position: 'sticky', top: 0, height: '100vh' }}>
         <div style={{ padding: '18px 14px 14px', display: 'flex', alignItems: 'center', gap: 10, borderBottom: '0.5px solid rgba(255,255,255,0.1)' }}>
           <div style={{ width: 32, height: 32, background: '#378ADD', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <i className="ti ti-packages" style={{ color: '#fff', fontSize: 17 }} />
@@ -113,7 +119,6 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* Nav */}
         <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto', overflowX: 'hidden' }}>
           {navItems.map((item, i) => {
             if (item.section) {
@@ -127,15 +132,9 @@ export default function DashboardPage() {
             const isActive = typeof window !== 'undefined' && window.location.pathname === item.path;
             return (
               <div key={i} onClick={() => router.push(item.path)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
-                  margin: '1px 8px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
-                  background: isActive ? '#378ADD' : 'transparent',
-                  color: isActive ? '#fff' : 'rgba(255,255,255,0.65)',
-                  fontSize: 13, transition: 'all 0.15s',
-                }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', margin: '1px 8px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap', background: isActive ? '#378ADD' : 'transparent', color: isActive ? '#fff' : 'rgba(255,255,255,0.65)', fontSize: 13, transition: 'all 0.15s' }}
+                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff'; }}}
+                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; }}}
               >
                 <i className={`ti ${item.icon}`} style={{ fontSize: 16, flexShrink: 0 }} />
                 {sidebarOpen && <span style={{ flex: 1 }}>{item.label}</span>}
@@ -147,7 +146,6 @@ export default function DashboardPage() {
           })}
         </nav>
 
-        {/* User footer */}
         <div style={{ padding: 12, borderTop: '0.5px solid rgba(255,255,255,0.1)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderRadius: 8, cursor: 'pointer' }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
@@ -169,10 +167,8 @@ export default function DashboardPage() {
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-
-        {/* Topbar */}
         <header style={{ background: '#fff', borderBottom: '0.5px solid #e2e8f0', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 500, color: '#0f172a' }}>Dashboard</div>
@@ -192,7 +188,6 @@ export default function DashboardPage() {
 
         <div style={{ flex: 1, padding: 24, overflowY: 'auto' }}>
 
-          {/* Error */}
           {error && (
             <div style={{ background: '#FCEBEB', border: '0.5px solid #F7C1C1', color: '#A32D2D', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
               <span>{error}</span>
@@ -215,17 +210,17 @@ export default function DashboardPage() {
               {[
                 { label: 'Branches',        value: stats.branches,  bg: '#E6F1FB', ic: '#185FA5', icon: 'ti-building-store', path: '/branches' },
                 { label: 'Inventory items', value: stats.items,     bg: '#EAF3DE', ic: '#3B6D11', icon: 'ti-box',            path: '/inventory' },
-                { label: 'Transfers',       value: stats.transfers, bg: '#FAEEDA', ic: '#854F0B', icon: 'ti-arrows-exchange',path: '/transfers' },
+                { label: 'Transfers',       value: stats.transfers, bg: '#FAEEDA', ic: '#854F0B', icon: 'ti-arrows-exchange', path: '/transfers' },
                 ...((['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'].includes(user?.role))
                   ? [{ label: 'Suppliers', value: stats.suppliers, bg: '#EEEDFE', ic: '#534AB7', icon: 'ti-truck', path: '/suppliers' }]
                   : []),
               ].map(card => (
                 <div key={card.label} onClick={() => router.push(card.path)}
-                  style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                  style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12, padding: '14px 16px', cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = '#94a3b8'}
                   onMouseLeave={e => e.currentTarget.style.borderColor = '#e2e8f0'}
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ marginBottom: 10 }}>
                     <div style={{ width: 34, height: 34, background: card.bg, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <i className={`ti ${card.icon}`} style={{ color: card.ic, fontSize: 17 }} />
                     </div>
@@ -239,8 +234,6 @@ export default function DashboardPage() {
 
           {/* Two column panels */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-
-            {/* Recent transfers */}
             <div style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12 }}>
               <div style={{ padding: '14px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 500, color: '#0f172a' }}>Recent transfers</span>
@@ -257,23 +250,16 @@ export default function DashboardPage() {
                         <i className="ti ti-arrows-exchange" style={{ color: s.color, fontSize: 13 }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 500, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {t.item?.name || 'Item'}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>
-                          {t.fromBranch?.name || '—'} → {t.toBranch?.name || '—'}
-                        </div>
+                        <div style={{ fontSize: 12, fontWeight: 500, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.item?.name || 'Item'}</div>
+                        <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>{t.fromBranch?.name || '—'} → {t.toBranch?.name || '—'}</div>
                       </div>
-                      <span style={{ background: s.bg, color: s.color, fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 500, flexShrink: 0 }}>
-                        {s.label}
-                      </span>
+                      <span style={{ background: s.bg, color: s.color, fontSize: 10, padding: '2px 8px', borderRadius: 99, fontWeight: 500, flexShrink: 0 }}>{s.label}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Branch stock levels */}
             <div style={{ background: '#fff', border: '0.5px solid #e2e8f0', borderRadius: 12 }}>
               <div style={{ padding: '14px 16px 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: 13, fontWeight: 500, color: '#0f172a' }}>Branches overview</span>
@@ -307,16 +293,7 @@ export default function DashboardPage() {
               <span style={{ fontSize: 13, fontWeight: 500, color: '#0f172a' }}>Quick actions</span>
             </div>
             <div style={{ padding: '12px 16px 16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
-              {[
-                { label: 'New transfer',   icon: 'ti-arrows-exchange', bg: '#E6F1FB', ic: '#185FA5', path: '/transfers',       roles: null },
-                { label: 'Add item',       icon: 'ti-plus',            bg: '#EAF3DE', ic: '#3B6D11', path: '/inventory',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','BRANCH_MANAGER'] },
-                { label: 'Purchase order', icon: 'ti-shopping-cart',   bg: '#FAEEDA', ic: '#854F0B', path: '/purchase-orders', roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
-                { label: 'Analytics',      icon: 'ti-chart-bar',       bg: '#EEEDFE', ic: '#534AB7', path: '/analytics',       roles: ['ADMIN','HEAD_OFFICE_ADMIN','ACCOUNTANT'] },
-                { label: 'Audit logs',     icon: 'ti-clipboard-list',  bg: '#E1F5EE', ic: '#0F6E56', path: '/audit-logs',      roles: ['ADMIN','HEAD_OFFICE_ADMIN'] },
-                { label: 'Manage users',   icon: 'ti-users',           bg: '#FCEBEB', ic: '#A32D2D', path: '/users',           roles: ['ADMIN'] },
-                { label: 'Batch tracking', icon: 'ti-clock',           bg: '#FAEEDA', ic: '#854F0B', path: '/batches',         roles: null },
-                { label: 'Stock',          icon: 'ti-packages',        bg: '#f1f5f9', ic: '#475569', path: '/stock',           roles: null },
-              ].filter(a => !a.roles || a.roles.includes(user?.role)).map(a => (
+              {quickActions.filter(a => !a.roles || a.roles.includes(user?.role)).map(a => (
                 <div key={a.label} onClick={() => router.push(a.path)}
                   style={{ background: '#fafafa', border: '0.5px solid #e2e8f0', borderRadius: 10, padding: '14px 10px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.15s' }}
                   onMouseEnter={e => { e.currentTarget.style.background = a.bg; e.currentTarget.style.borderColor = 'transparent'; }}
